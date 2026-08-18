@@ -807,3 +807,41 @@ actually need, and where each comes from:
   without `min-width: 0` refusing to shrink below its placeholder's
   intrinsic width) — fixed with `min-width: 0` plus a `480px` wrap
   breakpoint. `pytest` unaffected (183 passed) since no Python changed.
+
+## Voice — the cheap path, built
+
+- **[22:05] Browser-native voice, per Roi's call to revisit it now that
+  SSE + free-tier provider (both ranked above it in the cut list) were
+  already done.** `static/index.html` only — zero backend change, zero
+  new dependency, same posture as the earlier UI redesign.
+  Mic input: `SpeechRecognition` (feature-detected as
+  `window.SpeechRecognition || window.webkitSpeechRecognition`),
+  interim results shown live in the input field, on a final result it
+  calls the same `send()` function a typed message would — voice input
+  is not a separate code path, it fills the box and presses Send.
+  Spoken replies: a separate, off-by-default "voice replies" toggle
+  (pill, matches the `#status` chip styling) calls `speechSynthesis`
+  on the `done` SSE event's reply text. Off by default deliberately — a
+  typed session should not suddenly start talking; a voice session
+  should be able to opt in.
+  Both controls **feature-detect and disable themselves with an
+  explanatory title** rather than failing silently — Firefox doesn't
+  support `SpeechRecognition`, and this is stated as a real, checked
+  constraint rather than assumed.
+  Verified live: toggle switches state correctly (screenshot), a full
+  turn completes with voice replies on and `speak()` does not throw, the
+  mic button correctly requests microphone permission (confirmed by the
+  browser tooling's own capture-blocked notice) and degrades cleanly via
+  `onerror`/`onend` with zero console errors when permission isn't
+  available — real microphone audio itself isn't testable headlessly, so
+  this is as far as automated verification goes; the last mile (does a
+  real spoken question actually transcribe correctly) is Roi's own
+  browser, not this session's.
+  Caught while verifying: mobile (375px) still fits all four input-row
+  controls (mic/send/reset + input) without the overflow bug the earlier
+  UI pass fixed for three; header pills wrap cleanly to a second line
+  rather than clipping.
+  Updated `DESIGN_DOC.md` and `ASSUMPTIONS.md`'s "not built" / scope-cut
+  language, both written in P6 before this existed — a stale "no voice"
+  claim in either would have been an easy, avoidable question to get
+  caught on.

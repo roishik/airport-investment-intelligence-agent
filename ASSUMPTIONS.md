@@ -90,8 +90,13 @@ is rewarded, not penalized — expect to be pushed on it directly.
 
 ## Explicit scope cuts
 
-- **No voice interface.** The brief calls it a bonus; cut first if time
-  runs short, per `README.md`.
+- **Voice is browser-native, not a real cascaded pipeline.** The brief
+  calls it a bonus; `static/index.html` uses the Web Speech API
+  (`SpeechRecognition` for mic input, `speechSynthesis` for spoken
+  replies) directly against the existing SSE chat endpoint — no server
+  change, no new dependency. Chrome/Edge/Safari support it; Firefox does
+  not, and the controls disable themselves with an explanatory title
+  rather than failing silently on an unsupported browser.
 - **No persistent multi-user history or auth.** In-memory single-session
   history only (`app/main.py`) — fine for a live demo, not production.
 - **14 of 515 airports have no population data**, and this is handled by

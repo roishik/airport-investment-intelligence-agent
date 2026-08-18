@@ -284,8 +284,15 @@ An honest cut list is worth more than a longer feature list:
   time.
 - **Persistent multi-user history or auth.** In-memory, single-session —
   fine for a live demo, not production.
-- **Voice.** The brief calls it a bonus; the cheap Web Speech API path
-  was scoped but not built this session, first in line to cut.
+- **A real cascaded voice pipeline (STT/LLM/TTS provider stack).** The
+  brief calls voice a bonus; built the cheap browser-native path instead
+  (`SpeechRecognition`/`speechSynthesis` in `static/index.html`, zero
+  backend change) and left the real pipeline out — same reasoning as
+  every other cut here, cheapest thing that actually answers the
+  requirement. Browser support is real and stated, not hidden: Chrome/
+  Edge/Safari, not Firefox; the mic and "voice replies" controls disable
+  themselves with an explanatory title when unsupported rather than
+  failing silently.
 - **A production-grade injection classifier.** The regex guardrail
   catches the literal attack shapes tested against it; a fielded system
   would add a model-based detector *on top*, not instead — see "Regex

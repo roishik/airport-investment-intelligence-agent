@@ -49,7 +49,7 @@ app/
   providers/llm/        swappable backends: mock | openai | anthropic | groq
   main.py               FastAPI web chat (one page, one endpoint)
   cli.py                terminal chat
-static/index.html       the web UI: chat + live tool-call log
+static/index.html       the web UI: chat + live tool-call log + voice (Web Speech API)
 evals/                  runnable eval harness — 23 seeded failure-mode tasks
 tests/                  pytest suite
 ```

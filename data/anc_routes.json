@@ -1,0 +1,183 @@
+{
+  "_meta": {
+    "description": "Distinct scheduled routes with a source of ANC, one row per unique destination, with great-circle distance from ANC.",
+    "source": "OpenFlights routes.dat, joined to OurAirports for destination coordinates",
+    "fetched_at": "2026-08-18",
+    "why_not_bts_t100": "Builds data/anc_routes.json -- distinct scheduled routes out of\n    ANC with great-circle distance, for the 'percentage of long-haul\n    flights out of Anchorage' question.\n\n    Source is OpenFlights routes.dat, NOT BTS T-100 (the authoritative\n    source for actual scheduled departures/seats/passengers per route),\n    because T-100 is blocked behind TranStats' bot-protected download\n    portal (verified: the PREZIP listing loads, HTTP 200; the actual\n    file GET returns HTTP 404 behind an F5 session-cookie challenge),\n    and data.transportation.gov's Socrata catalog does not carry T-100\n    either. OpenFlights is a community-maintained, no-key dataset that\n    is NOT continuously updated (last touched circa 2014), used here as\n    a stated fallback, not presented as current.",
+    "known_limitation": "KNOWN LIMITATION: this is route EXISTENCE, not flight FREQUENCY -- a\n    route flown daily and one flown weekly count identically (one row\n    each). 'Percentage of long-haul flights' therefore actually measures\n    'percentage of long-haul ROUTES' in this dataset -- and the two\n    likely diverge, since short-haul Bush-Alaska routes plausibly fly\n    more frequently than long-haul trunk routes, which would make the\n    true flight-weighted long-haul share LOWER than what's reported\n    here. If a real T-100 extract becomes available, swap it in.",
+    "missing_destination_geo": [],
+    "route_count": 34
+  },
+  "routes": [
+    {
+      "destination_iata": "ORD",
+      "destination_name": "Chicago O'Hare International Airport",
+      "distance_mi": 2838.6
+    },
+    {
+      "destination_iata": "HNL",
+      "destination_name": "Daniel K. Inouye International Airport",
+      "distance_mi": 2780.6
+    },
+    {
+      "destination_iata": "PHX",
+      "destination_name": "Phoenix Sky Harbor International Airport",
+      "distance_mi": 2548.7
+    },
+    {
+      "destination_iata": "MSP",
+      "destination_name": "Minneapolis\u2013Saint Paul International Airport / Wold\u2013Chamberlain Field",
+      "distance_mi": 2511.6
+    },
+    {
+      "destination_iata": "DEN",
+      "destination_name": "Denver International Airport",
+      "distance_mi": 2400.5
+    },
+    {
+      "destination_iata": "LAX",
+      "destination_name": "Los Angeles International Airport",
+      "distance_mi": 2343.2
+    },
+    {
+      "destination_iata": "LAS",
+      "destination_name": "Harry Reid International Airport",
+      "distance_mi": 2301.1
+    },
+    {
+      "destination_iata": "SLC",
+      "destination_name": "Salt Lake City International Airport",
+      "distance_mi": 2120.7
+    },
+    {
+      "destination_iata": "PDX",
+      "destination_name": "Portland International Airport",
+      "distance_mi": 1539.1
+    },
+    {
+      "destination_iata": "SEA",
+      "destination_name": "Seattle\u2013Tacoma International Airport",
+      "distance_mi": 1445.2
+    },
+    {
+      "destination_iata": "ADK",
+      "destination_name": "Adak Airport",
+      "distance_mi": 1188.7
+    },
+    {
+      "destination_iata": "STG",
+      "destination_name": "St George Airport",
+      "distance_mi": 767.2
+    },
+    {
+      "destination_iata": "SNP",
+      "destination_name": "St Paul Island Airport",
+      "distance_mi": 764.2
+    },
+    {
+      "destination_iata": "BRW",
+      "destination_name": "Wiley Post Will Rogers Memorial Airport",
+      "distance_mi": 722.2
+    },
+    {
+      "destination_iata": "SCC",
+      "destination_name": "Deadhorse Airport",
+      "distance_mi": 624.4
+    },
+    {
+      "destination_iata": "CDB",
+      "destination_name": "Cold Bay Airport",
+      "distance_mi": 618.8
+    },
+    {
+      "destination_iata": "JNU",
+      "destination_name": "Juneau International Airport",
+      "distance_mi": 569.1
+    },
+    {
+      "destination_iata": "SDP",
+      "destination_name": "Sand Point Airport",
+      "distance_mi": 556.2
+    },
+    {
+      "destination_iata": "OTZ",
+      "destination_name": "Ralph Wien Memorial Airport",
+      "distance_mi": 546.6
+    },
+    {
+      "destination_iata": "OME",
+      "destination_name": "Nome Airport",
+      "distance_mi": 537.1
+    },
+    {
+      "destination_iata": "KSM",
+      "destination_name": "St Mary's Airport",
+      "distance_mi": 440.5
+    },
+    {
+      "destination_iata": "BET",
+      "destination_name": "Bethel Airport",
+      "distance_mi": 397.5
+    },
+    {
+      "destination_iata": "UNK",
+      "destination_name": "Unalakleet Airport",
+      "distance_mi": 391.3
+    },
+    {
+      "destination_iata": "DLG",
+      "destination_name": "Dillingham Airport",
+      "distance_mi": 327.8
+    },
+    {
+      "destination_iata": "ANI",
+      "destination_name": "Aniak Airport",
+      "distance_mi": 317.0
+    },
+    {
+      "destination_iata": "AKN",
+      "destination_name": "King Salmon Airport",
+      "distance_mi": 287.9
+    },
+    {
+      "destination_iata": "FAI",
+      "destination_name": "Fairbanks International Airport",
+      "distance_mi": 260.0
+    },
+    {
+      "destination_iata": "ADQ",
+      "destination_name": "Kodiak Airport",
+      "distance_mi": 252.6
+    },
+    {
+      "destination_iata": "MCG",
+      "destination_name": "McGrath Airport",
+      "distance_mi": 219.1
+    },
+    {
+      "destination_iata": "ILI",
+      "destination_name": "Iliamna Airport",
+      "distance_mi": 194.2
+    },
+    {
+      "destination_iata": "CDV",
+      "destination_name": "Merle K (Mudhole) Smith Airport",
+      "distance_mi": 159.2
+    },
+    {
+      "destination_iata": "VDZ",
+      "destination_name": "Valdez Pioneer Field",
+      "distance_mi": 124.9
+    },
+    {
+      "destination_iata": "HOM",
+      "destination_name": "Homer Airport",
+      "distance_mi": 117.5
+    },
+    {
+      "destination_iata": "ENA",
+      "destination_name": "Kenai Municipal Airport",
+      "distance_mi": 59.5
+    }
+  ]
+}

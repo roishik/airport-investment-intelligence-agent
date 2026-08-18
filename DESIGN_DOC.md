@@ -302,7 +302,7 @@ An honest cut list is worth more than a longer feature list:
 
 ## 5. How this would be evaluated
 
-`evals/` is a runnable harness, not a written plan: 23 seeded tasks
+`evals/` is a runnable harness, not a written plan: 26 seeded tasks
 across correctness, missing-data handling, self-computation refusal,
 prompt injection, explanation quality and loop robustness, with
 deterministic graders plus an LLM judge validated against hand labels.
@@ -310,4 +310,26 @@ deterministic graders plus an LLM judge validated against hand labels.
 "is v2 of this prompt better than v1" an answerable question rather than
 an opinion. See `evaluation_plan.md`.
 
-> **TODO(P8)** — paste the final run's headline numbers.
+**Real numbers, 2026-08-18, against the real 515-airport dataset**
+(`evals/results/openai_20260818T191158Z.md`,
+`evals/results/mock_20260818T191251Z.md`):
+
+| Provider | Pass rate | Avg partial-credit score |
+|---|---|---|
+| `openai` (gpt-4o-mini) | **24/26 = 92%** | 0.97 |
+| `mock` (scripted stand-in, not real reasoning) | 9/26 = 35% | 0.81 |
+
+**Judge-vs-human agreement** (`evals/judge_validation.py`, 10 hand-labeled
+examples): **90% binary pass/fail agreement, mean absolute score
+difference 0.80** (1–10 scale) — clears the "intern test" ≥80% bar the
+research this program is based on treats as "the rubric is specific
+enough to automate."
+
+Two real bugs were found and fixed by running this suite against the
+real domain data (a `find_items` crash on empty-filter calls, and a
+number-parsing gap in the fabrication grader that misread comma
+thousands-separators and percent-formatted rates) — see `evals/README.md`
+for the detail. One real product gap is still open, not special-cased:
+`ambiguous_vague_priorities_growth_not_congestion` — a stated-preference
+question that the model answers on default weights instead of calling
+`rank_by_priorities`.

@@ -21,9 +21,9 @@ from evals.types import GradeResult, Grader, Outcome, Task
 
 # Matches "9,124,325.75" as one number, not just the "325.75" tail, and
 # captures a trailing "%" separately — both found live in P4
-# (2026-08-18) on real airport data, neither visible in the scaffold's
-# mock domain (cost=120, quality=8.5 never needed thousands separators
-# or ever appeared as a rate):
+# (2026-08-18) on real airport data, neither visible in the earlier
+# generic mock domain (cost=120, quality=8.5 never needed thousands
+# separators or ever appeared as a rate):
 #   1. no comma group -> silently truncated every comma-formatted number
 #      an agent wrote for a large airport (36,497,303.0 read as 303.0).
 #   2. no percent handling -> a growth-rate criterion's raw fraction

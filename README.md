@@ -6,14 +6,18 @@ on **deterministic, inspectable scoring logic**, and using an LLM only to
 choose tools, resolve what the user meant, and explain numbers it never
 computed.
 
-> **TODO(P8)** — replace this line with the headline finding once the
-> real criteria and dataset land.
+**Headline finding:** under the default headroom-weighted criteria, the
+biggest airport does not automatically win — LAX ranks **67th of 144**
+eligible airports, and the actual top two (Nashville and Denver) are
+0.42% apart, with every one of the five weights able to flip that order
+at a 5–10% change. See `DESIGN_DOC.md` §2 for the full sensitivity
+analysis.
 
 ## Run it in one minute, with no API key
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/pytest -q                     # 181 tests, no key, no network
+.venv/bin/pytest -q                     # 186 tests, no key, no network
 .venv/bin/python -m app.cli             # terminal chat, mock LLM
 .venv/bin/uvicorn app.main:app --reload # web chat at http://127.0.0.1:8000
 ```
@@ -50,7 +54,7 @@ app/
   main.py               FastAPI web chat (one page, one endpoint)
   cli.py                terminal chat
 static/index.html       the web UI: chat + live tool-call log + voice (Web Speech API)
-evals/                  runnable eval harness — 23 seeded failure-mode tasks
+evals/                  runnable eval harness — 26 seeded failure-mode tasks
 tests/                  pytest suite
 ```
 
@@ -75,8 +79,8 @@ their own code paths, deliberately separate from `scoring.py`.
 
 ## Where the LLM is, and where it is not
 
-> **TODO(P8)** — expand into the full table; `DESIGN_DOC.md` §"Where and
-> how AI is used" is the canonical version.
+`DESIGN_DOC.md` §"Where and how AI is used" is the canonical version,
+with the enforcement mechanism for each row. Short version:
 
 | Decision | Made by |
 |---|---|
@@ -129,20 +133,38 @@ plus a model-based detector for the paraphrased attacks a regex misses.
 .venv/bin/python -m evals.run_evals --provider openai      # real key from .env
 ```
 
-23 seeded tasks across correctness, missing-data, self-computation,
+26 seeded tasks across correctness, missing-data, self-computation,
 injection, explanation-quality and robustness, with deterministic graders
 plus an LLM judge that was itself validated against hand labels. See
 `evals/README.md` and `evaluation_plan.md`.
 
 ## Scope and limitations
 
-> **TODO(P8)** — data sources, staleness dates, coverage gaps, and every
-> deliberate scope cut. `ASSUMPTIONS.md` is the canonical version.
+`ASSUMPTIONS.md` is the canonical version — every data gap, unit
+conversion, and staleness date is there. Highlights:
+
+- Ranked set is FAA hub class L/M/S (144 of 515 airports); the full 515
+  remain queryable by name, just not ranked by default — percentage
+  growth on a near-zero base (e.g. a 37,951-passenger field posting
+  +126,403% YoY) makes an unfiltered ranking meaningless.
+- Data is snapshotted (FAA enplanements, OurAirports, Census population),
+  not live — refresh with `data/refresh_data.py`. The one live call
+  (FAA NAS Status) is deliberately kept **outside** the scored path.
+- Expansion *feasibility* (land, permitting, political consent) is not
+  modeled at all — the ranking answers "where is the demand pressure,"
+  not "where can you actually build."
+- Q3's "long haul" is answered as a domestic-vs-international departure
+  share, a stated proxy — no public dataset carries per-route distance
+  outside the bot-blocked TranStats portal.
+- No FAA ASPM/OPSNET or BTS On-Time Performance delay data (both blocked
+  behind logins/bot-walls) — congestion leans on capacity/utilization
+  proxies, not measured delay minutes.
+- No persistent multi-user history or auth — in-memory, single-session.
 
 ## Tests
 
 ```bash
-.venv/bin/pytest -q     # 153 passing
+.venv/bin/pytest -q     # 186 passing
 ```
 
 No network, no API key, no mocking of the pure modules — `scoring.py`,

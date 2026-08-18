@@ -27,8 +27,8 @@ for the "add a task in under 2 minutes" walkthrough — every task here
 follows the exact same five-line pattern.
 
 RE-DOMAINED 2026-08-18 (P4): every task now runs against the real
-515-airport dataset (app/dataset.py) instead of the scaffold's
-option_a/option_b/option_c mock. Domain swap, not a rewrite of intent —
+515-airport dataset (app/dataset.py) instead of an earlier generic
+three-item mock domain. Domain swap, not a rewrite of intent —
 each task still targets the exact same failure mode it always did; only
 the user_message wording and expected ids changed. The one substantive
 addition is scoring_direct_known_dataset_ranking_ground_truth, whose
@@ -362,7 +362,7 @@ TASKS: list[Task] = [
         "compare_items directly with whatever real ids it can parse out of the message, silently dropping "
         "unrecognized tokens like QQQ rather than resolving and reporting them. Expected to fail under "
         "LLM_PROVIDER=mock for that reason; run under openai for a meaningful result. "
-        "Domain-adapted from the scaffold's option_z case: adding resolve_entity legitimately changed the "
+        "Domain-adapted from an earlier generic ambiguous-id case: adding resolve_entity legitimately changed the "
         "agent's strategy for a real provider — it now resolves ids FIRST, finds QQQ non-decisive, and reports "
         "that without ever attempting a doomed compare_items call. The old tool-error path it used to cover "
         "incidentally is still covered deliberately — see missing_data_compare_items_unknown_id_direct below.",

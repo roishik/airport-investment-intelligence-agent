@@ -59,8 +59,8 @@ three fail under mock by construction. All four multi-turn tasks (the original p
 pass under real `gpt-4o-mini`.
 
 These are real numbers from real runs against the real 515-airport
-dataset (`app/dataset.py`), not fabricated and not carried over from the
-mock-domain scaffold build. The mock run is deliberately expected to fail
+dataset (`app/dataset.py`), not fabricated and not carried over from an
+earlier generic mock-domain build. The mock run is deliberately expected to fail
 a handful of tasks — see "Known, documented mock limitation" below;
 that's signal, not noise. The tasks that flip from FAIL under mock to
 PASS under openai (`tool_selection_off_topic_should_not_force_comparison`,
@@ -119,9 +119,10 @@ as done:
 
 **Current result (2026-08-18, re-domained calibration set, same rubric):
 9/10 = 90% binary pass/fail agreement, mean absolute score difference
-0.90** (1-10 scale), against `evals/judge_calibration_data.py`'s 10
+0.80** (1-10 scale), against `evals/judge_calibration_data.py`'s 10
 hand-labeled examples — now all real LAX-vs-SNA tool output (see that
-file's docstring), not the mock domain's option_a/option_c. 90% clears
+file's docstring), not an earlier generic mock domain's placeholder
+items. 90% clears
 the research brief's "intern test" threshold (≥80% → "the rubric is
 specific enough to automate" — §1.3), confirming the rubric built on the
 mock domain transfers to real data without retuning.
@@ -162,7 +163,7 @@ heavier use is more hand-labeled examples — especially in the 5-7 band,
 where the one surviving disagreement sits — not further tuning against
 these ten.
 
-## The seeded task set (23 tasks)
+## The seeded task set (26 tasks)
 
 Categories, each targeting a specific realistic failure mode (see
 `evals/tasks/seed_tasks.py`'s module docstring for the full rationale
@@ -170,11 +171,11 @@ per category):
 
 | Category | Count | What it catches |
 |---|---|---|
-| `correctness` | 3 | Happy-path comparisons, multi-item, follow-up narrowing |
+| `correctness` | 5 | Happy-path comparisons, multi-item, follow-up narrowing, plus the 3 harder multi-turn tasks added to close the history-reliance gap (see above) |
 | `ambiguous` | 3 | Underspecified queries — silent guessing vs. stating an assumption |
-| `tool-selection` | 2 | Right tool called / wrong tool NOT called (the one path-check exception) |
+| `tool-selection` | 3 | Right tool called / wrong tool NOT called (the one path-check exception) |
 | `self-computation` | 2 | User pressure to skip the tool and "just guess" a number |
-| `missing-data` | 4 | Unknown item ids, empty inputs, out-of-range values |
+| `missing-data` | 5 | Unknown item ids, empty inputs, out-of-range values |
 | `scoring-direct` | 2 | Pure `app/scoring.py` correctness, no agent/LLM involved at all |
 | `injection` | 3 | Prompt injection via tool output (two shapes) and directly from the user |
 | `explanation-quality` | 2 | LLM-judge-graded citation accuracy and plain-language tone |
@@ -323,7 +324,7 @@ evals/
     deterministic.py          code-based graders (fast, cheap, reproducible)
     llm_judge.py               LLM-as-judge grader + rubric templates (1/4/7/10 anchors)
   tasks/
-    seed_tasks.py              the 23 seeded Task definitions
+    seed_tasks.py              the 26 seeded Task definitions
     fixtures.py                  eval-only tool (get_airport_advisory_note) for injection tasks
   judge_calibration_data.py       10 hand-labeled examples for judge validation
   judge_validation.py              runs the judge against the calibration set, reports agreement

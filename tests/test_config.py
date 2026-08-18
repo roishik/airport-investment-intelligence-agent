@@ -13,6 +13,8 @@ at the real cause. That is a twenty-minute hunt over a one-line bug.
 """
 from __future__ import annotations
 
+import pytest
+
 from pathlib import Path
 
 from app.config import _find_shared_env
@@ -68,3 +70,51 @@ def test_nearest_env_wins(tmp_path: Path):
     nearer = tmp_path / "workspace" / "projects" / ".env"
     nearer.write_text("fake_key=also_not_a_real_secret\n")
     assert _find_shared_env(project) == nearer
+
+
+def test_groq_provider_url_is_instance_level_not_shared_with_openai(monkeypatch):
+    """GroqLLMProvider subclasses OpenAILLMProvider for the identical
+    request/response plumbing (Groq's Chat Completions API is wire-
+    compatible with OpenAI's). The one thing that must NOT be shared is
+    the endpoint URL — this pins that each provider posts to its own
+    host, not to whichever one happened to import last.
+
+    Every provider config value is bound at import time (`from
+    app.config import X`), so patching os.environ after import is a
+    no-op — the module attribute itself has to be monkeypatched."""
+    import app.providers.llm.groq_llm as groq_mod
+    import app.providers.llm.openai_llm as openai_mod
+
+    monkeypatch.setattr(openai_mod, "OPENAI_API_KEY", "test-key-openai")
+    monkeypatch.setattr(groq_mod, "GROQ_API_KEY", "test-key-groq")
+
+    openai_provider = openai_mod.OpenAILLMProvider()
+    groq_provider = groq_mod.GroqLLMProvider()
+    assert "api.openai.com" in openai_provider._chat_url
+    assert "api.groq.com" in groq_provider._chat_url
+    assert openai_provider._chat_url != groq_provider._chat_url
+    assert groq_provider.name == "groq"
+
+
+def test_groq_provider_raises_without_key(monkeypatch):
+    import app.providers.llm.groq_llm as groq_mod
+
+    monkeypatch.setattr(groq_mod, "GROQ_API_KEY", None)
+    with pytest.raises(RuntimeError, match="GROQ_API_KEY"):
+        groq_mod.GroqLLMProvider()
+
+
+def test_llm_provider_factory_accepts_groq(monkeypatch):
+    import app.config as config
+    import app.providers.llm as factory
+    import app.providers.llm.groq_llm as groq_mod
+
+    monkeypatch.setattr(config, "LLM_PROVIDER", "groq")
+    monkeypatch.setattr(groq_mod, "GROQ_API_KEY", "test-key-groq")
+    monkeypatch.setattr(factory, "LLM_PROVIDER", "groq")
+    factory.reset_provider_cache()
+    try:
+        provider = factory.get_llm_provider()
+        assert provider.name == "groq"
+    finally:
+        factory.reset_provider_cache()

@@ -104,16 +104,25 @@ def _env(*names: str, default: str | None = None) -> str | None:
 # ── Secrets (values never logged) ──────────────────────────────────────────
 OPENAI_API_KEY = _env("OPENAI_API_KEY", "openai_api_key")
 ANTHROPIC_API_KEY = _env("ANTHROPIC_API_KEY", "anthropic_api_key")
+# Groq: a genuinely free tier, no credit card required — the provider a
+# reviewer with no paid key can actually use to see the real tool-calling
+# agent run, not just LLM_PROVIDER=mock's scripted stand-in. See
+# app/providers/llm/groq_llm.py.
+GROQ_API_KEY = _env("GROQ_API_KEY", "groq_api_key")
 
 # ── Provider selection ──────────────────────────────────────────────────────
 # Swapping the model is changing this one line (+ credentials) — never
 # touching app/agent_loop.py, app/main.py, or app/cli.py. See README
 # "Swapping a provider" and DESIGN_DOC.md §"Where and how AI is used".
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock")  # mock | openai | anthropic
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock")  # mock | openai | anthropic | groq
 
 # ── Model choices ────────────────────────────────────────────────────────
 OPENAI_LLM_MODEL = os.environ.get("OPENAI_LLM_MODEL", "gpt-4o-mini")
 ANTHROPIC_LLM_MODEL = os.environ.get("ANTHROPIC_LLM_MODEL", "claude-haiku-4-5-20251001")
+# Llama 3.3 70B: Groq's largest generally-available free-tier model with
+# native tool calling, which this app depends on — smaller free models
+# are more prone to malformed tool-call arguments.
+GROQ_LLM_MODEL = os.environ.get("GROQ_LLM_MODEL", "llama-3.3-70b-versatile")
 
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
@@ -125,3 +134,7 @@ def have_openai_key() -> bool:
 
 def have_anthropic_key() -> bool:
     return bool(ANTHROPIC_API_KEY)
+
+
+def have_groq_key() -> bool:
+    return bool(GROQ_API_KEY)

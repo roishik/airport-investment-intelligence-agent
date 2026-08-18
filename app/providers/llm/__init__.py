@@ -1,8 +1,10 @@
 """LLM provider factory — the AI_PROVIDER pattern.
 
 Default is `mock` (see app/config.py) so the whole app runs with
-zero setup. Swap by setting LLM_PROVIDER=openai or =anthropic in .env —
-nothing outside this file and app/config.py needs to change."""
+zero setup. Swap by setting LLM_PROVIDER=openai, =anthropic, or =groq in
+.env — nothing outside this file and app/config.py needs to change.
+`groq` is the free-tier option: no credit card required, for a reviewer
+who wants to see the real tool-calling agent run without a paid key."""
 from __future__ import annotations
 
 from app.config import LLM_PROVIDER
@@ -28,8 +30,12 @@ def get_llm_provider() -> LLMProvider:
         from app.providers.llm.anthropic_llm import AnthropicLLMProvider
 
         _provider = AnthropicLLMProvider()
+    elif LLM_PROVIDER == "groq":
+        from app.providers.llm.groq_llm import GroqLLMProvider
+
+        _provider = GroqLLMProvider()
     else:
-        raise ValueError(f"Unknown LLM_PROVIDER={LLM_PROVIDER!r}. Use 'mock', 'openai', or 'anthropic'.")
+        raise ValueError(f"Unknown LLM_PROVIDER={LLM_PROVIDER!r}. Use 'mock', 'openai', 'anthropic', or 'groq'.")
     return _provider
 
 

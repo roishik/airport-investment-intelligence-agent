@@ -76,6 +76,10 @@ async function loadHealth() {
   }
 }
 
+// SSE events arrive as "event: <name>\ndata: <json>\n\n" blocks, and a
+// fetch chunk boundary can land in the middle of one — so this buffers
+// across reads and only parses complete "\n\n"-terminated blocks,
+// leaving any trailing partial block in the buffer for the next chunk.
 async function send() {
   const text = inputEl.value.trim();
   if (!text) return;
@@ -83,14 +87,39 @@ async function send() {
   addMessage('user', text);
   statusEl.textContent = 'thinking...';
   try {
-    const res = await fetch('/chat', {
+    const res = await fetch('/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text }),
     });
-    const data = await res.json();
-    for (const entry of (data.tool_log || [])) addToolLogEntry(entry);
-    addMessage('agent', data.reply);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let toolCallCount = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let boundary;
+      while ((boundary = buffer.indexOf('\n\n')) !== -1) {
+        const block = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+        const eventLine = block.split('\n').find(l => l.startsWith('event: '));
+        const dataLine = block.split('\n').find(l => l.startsWith('data: '));
+        if (!eventLine || !dataLine) continue;
+        const eventName = eventLine.slice('event: '.length);
+        const data = JSON.parse(dataLine.slice('data: '.length));
+        if (eventName === 'tool_call') {
+          toolCallCount++;
+          statusEl.textContent = `running tool ${toolCallCount}: ${data.tool_name}...`;
+          addToolLogEntry(data);
+        } else if (eventName === 'done') {
+          addMessage('agent', data.reply);
+        } else if (eventName === 'error') {
+          addMessage('agent', `(agent error: ${data.message})`);
+        }
+      }
+    }
   } catch (e) {
     addMessage('agent', '(error contacting backend — see console)');
     console.error(e);

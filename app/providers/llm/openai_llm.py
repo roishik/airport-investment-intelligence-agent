@@ -29,6 +29,11 @@ class OpenAILLMProvider:
                 "to run without a key."
             )
         self._api_key: str = OPENAI_API_KEY
+        # Instance attribute, not just the module-level _CHAT_URL, so
+        # groq_llm.py's GroqLLMProvider can subclass this and point the
+        # exact same request/response plumbing at Groq's wire-compatible
+        # endpoint by overriding one attribute instead of copying chat().
+        self._chat_url: str = _CHAT_URL
         self.last_usage: dict[str, int] = {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
 
     def reset_usage(self) -> None:
@@ -50,7 +55,7 @@ class OpenAILLMProvider:
             payload["tool_choice"] = "auto"
 
         resp = httpx.post(
-            _CHAT_URL,
+            self._chat_url,
             headers={"Authorization": f"Bearer {self._api_key}"},
             json=payload,
             timeout=60.0,

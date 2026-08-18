@@ -254,3 +254,52 @@ def test_max_turns_exceeded_carries_the_partial_work():
     assert len(exc.tool_log) == 3
     assert all(e.error is None for e in exc.tool_log)
     assert exc.messages
+
+
+def test_on_tool_call_fires_live_per_call_not_just_at_the_end():
+    """The hook behind the SSE live tool-call log (app/main.py). Must
+    fire once per tool call, in order, with the SAME entries that end up
+    in the final tool_log — and it must not change what run_agent
+    returns, since it's an observation hook, not a control hook."""
+    seen: list = []
+    provider = MockLLMProvider()
+    result = run_agent(
+        user_message="compare LAX and SNA for me",
+        history=[],
+        provider=provider,
+        tool_schemas=TOOL_SCHEMAS,
+        tool_registry=TOOL_REGISTRY,
+        system_prompt=BASE_SYSTEM_PROMPT,
+        on_tool_call=lambda entry: seen.append(entry),
+    )
+    assert seen == result.tool_log
+    assert len(seen) == 1
+    assert seen[0].tool_name == "compare_items"
+
+
+def test_on_tool_call_still_fires_for_every_call_before_max_turns_exceeded():
+    seen: list = []
+    with pytest.raises(MaxTurnsExceeded):
+        run_agent(
+            user_message="loop forever please",
+            history=[],
+            provider=NeverFinishesProviderForHookTest(),
+            tool_schemas=TOOL_SCHEMAS,
+            tool_registry=TOOL_REGISTRY,
+            system_prompt=BASE_SYSTEM_PROMPT,
+            max_turns=3,
+            on_tool_call=lambda entry: seen.append(entry),
+        )
+    assert len(seen) == 3
+
+
+class NeverFinishesProviderForHookTest:
+    name, model = "never-finishes-hook-test", "test"
+
+    def chat(self, messages, tools=None):
+        return LLMResponse(
+            content=None,
+            tool_calls=(ToolCall(id="c", name="get_item_metrics", arguments={"item_id": "LAX"}),),
+            provider=self.name,
+            model=self.model,
+        )

@@ -92,7 +92,17 @@ def run_agent(
     tool_registry: dict[str, Callable[[dict[str, Any]], Any]],
     system_prompt: str,
     max_turns: int = 6,
+    on_tool_call: Callable[[ToolLogEntry], None] | None = None,
 ) -> AgentResult:
+    """`on_tool_call`, if given, fires synchronously the instant each tool
+    call finishes (success or error) — BEFORE the loop goes back to the
+    provider for the next turn. This is what lets app/main.py's SSE
+    endpoint push a live tool-call log to the browser turn-by-turn on a
+    multi-tool question, instead of the whole log appearing at once after
+    the entire loop finishes. Purely an observation hook: it cannot
+    affect control flow, retry a call, or see anything the tool_log list
+    doesn't already carry — the loop's behavior is identical whether or
+    not a caller passes one."""
     messages: list[dict[str, Any]] = [{"role": "system", "content": system_prompt}]
     messages.extend(history)
     messages.append({"role": "user", "content": user_message})
@@ -134,7 +144,10 @@ def run_agent(
                     result = {"error": error}
                     logger.warning("tool %s raised: %s", tc.name, exc)
 
-            tool_log.append(ToolLogEntry(tool_name=tc.name, arguments=dict(tc.arguments), result=result, error=error))
+            entry = ToolLogEntry(tool_name=tc.name, arguments=dict(tc.arguments), result=result, error=error)
+            tool_log.append(entry)
+            if on_tool_call is not None:
+                on_tool_call(entry)
 
             # Guardrail: EVERY tool result is treated as untrusted data,
             # no exceptions, before it re-enters the conversation. This is

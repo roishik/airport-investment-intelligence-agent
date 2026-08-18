@@ -718,3 +718,57 @@ actually need, and where each comes from:
   back to the eval suite as a new task — Roi's explicit call, checked
   live rather than formalized, since P5 is next and this was a targeted
   prompt fix, not a new feature needing its own regression coverage.
+
+## P5 — free-tier provider + SSE streaming
+
+- **[21:10] D6: Groq added as a fourth LLM_PROVIDER, so a reviewer with
+  no paid key can still see the real tool-calling agent run.** Groq's
+  Chat Completions API is wire-compatible with OpenAI's, so
+  `GroqLLMProvider` subclasses `OpenAILLMProvider` rather than
+  duplicating the request/response plumbing — only the endpoint URL,
+  default model, and key lookup differ. That required one real change to
+  the parent class: the endpoint URL moved from a module-level constant
+  to `self._chat_url`, set in `__init__`, so a subclass can point the
+  identical `chat()` method at a different host without overriding it.
+  Default model `llama-3.3-70b-versatile` — Groq's largest generally
+  available free-tier model with native tool calling; smaller free
+  models are more prone to malformed tool-call arguments, which this app
+  depends on for every non-trivial question.
+  Not smoke-tested against a live Groq key this session — same posture
+  as `anthropic_llm.py`: creating an account is a Roi-only action (see
+  the OpenSky Network precedent). Verified instead: imports cleanly,
+  raises the expected `RuntimeError` with no key, and the factory
+  (`app/providers/llm/__init__.py`) selects it correctly — three new
+  tests in `tests/test_config.py`, including one that pins the two
+  providers post to two DIFFERENT hosts (the one thing that must not
+  accidentally end up shared between parent and subclass).
+- **[21:20] D7: SSE for the tool-call log, not for the model's tokens.**
+  The architecture decision that LLM calls are non-streaming stands
+  unchanged and for the same reason (the loop needs the complete
+  `tool_calls` list before it can act, so token streaming buys nothing
+  on a tool-calling turn). What was actually missing: on a multi-tool
+  question, the UI showed nothing for several seconds, then dumped the
+  entire tool-call log at once. Fixed by adding one optional hook to
+  `agent_loop.run_agent` — `on_tool_call`, fired synchronously the
+  instant each tool call finishes — which cannot affect control flow or
+  see anything `tool_log` doesn't already carry, so the loop's behavior
+  is provably identical whether a caller passes one or not.
+  New `POST /chat/stream` runs the (fully synchronous, network-blocking)
+  agent loop on a worker thread via `threading.Thread`, with
+  `on_tool_call` pushing each completed call onto a `queue.Queue`; an
+  async generator drains that queue via `asyncio.to_thread(q.get)` and
+  emits each item as an SSE event, so the asyncio event loop stays free
+  to serve other requests while a real LLM call is in flight. No new
+  dependency — `queue`/`threading` are stdlib, and the frontend reads
+  the stream via `fetch()` + `ReadableStream` rather than `EventSource`
+  (which cannot send a POST body, and the message/history shape needs
+  one). Kept the existing non-streaming `POST /chat` alongside it rather
+  than replacing it — smaller, still correct, and nothing else in the
+  app depends on picking one.
+  Verified live in the browser against `LLM_PROVIDER=mock`: the tool-call
+  log now fills in as `compare_items` completes, before the final answer
+  arrives, network tab shows a clean `200` on `/chat/stream` with no
+  console errors. The `MaxTurnsExceeded` streaming path (a provider that
+  never stops requesting tools) was checked directly against the queue
+  rather than through the browser: 6 `tool_call` events followed by one
+  `max_turns` event, matching the default `max_turns=6` exactly.

@@ -13,7 +13,7 @@ computed.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/pytest -q                     # 153 tests, no key, no network
+.venv/bin/pytest -q                     # 181 tests, no key, no network
 .venv/bin/python -m app.cli             # terminal chat, mock LLM
 .venv/bin/uvicorn app.main:app --reload # web chat at http://127.0.0.1:8000
 ```
@@ -26,8 +26,12 @@ LLM_PROVIDER=openai
 OPENAI_API_KEY=sk-...
 ```
 
-`LLM_PROVIDER=anthropic` works the same way. Nothing outside
-`app/config.py` and `app/providers/llm/` changes when you swap.
+`LLM_PROVIDER=anthropic` works the same way. **No paid key?**
+`LLM_PROVIDER=groq` + a free key from
+[console.groq.com/keys](https://console.groq.com/keys) (no credit card)
+gets you the real tool-calling agent, not just the mock stand-in — see
+`app/providers/llm/groq_llm.py`. Nothing outside `app/config.py` and
+`app/providers/llm/` changes when you swap.
 
 ## Layout
 
@@ -42,7 +46,7 @@ app/
   system_prompt.py      the "never compute a number yourself" contract
   agent_loop.py         the hand-rolled loop (~70 lines, no framework)
   config.py             env loading + provider selection
-  providers/llm/        swappable backends: mock | openai | anthropic
+  providers/llm/        swappable backends: mock | openai | anthropic | groq
   main.py               FastAPI web chat (one page, one endpoint)
   cli.py                terminal chat
 static/index.html       the web UI: chat + live tool-call log

@@ -952,3 +952,38 @@ actually need, and where each comes from:
   synthesizer reads `**` as nothing useful and a table read aloud pipe-by-pipe is worse than saying
   nothing. Fenced code blocks are dropped outright for the same reason: reading raw tool JSON aloud
   is not an answer.
+
+## UI restyle — light canvas, dark code viewports, violet reserved for live state
+
+- **Replaced the amber-on-charcoal terminal aesthetic wholesale.** The old palette was defensible on
+  its own terms (flight decks and trading terminals use amber-on-dark for legibility under long
+  sessions), but it made the page look like a hobby project's idea of "technical". The replacement
+  is a light off-white canvas with deep charcoal containers, violet/indigo accents, a geometric
+  sans, 12–16px radii, and pill micro-tags. Purely presentational: no scoring, tool, eval, or
+  prompt behaviour changed, and still zero dependencies — no webfont fetch, no CSS framework, no
+  build step.
+- **The two panels are deliberately different surfaces, because they show different kinds of
+  thing.** The conversation is prose meant to be read at length, so it sits on white with near-black
+  text — the highest-legibility combination available. The reasoning trace is machine output: raw
+  tool calls and raw JSON. It gets a deep charcoal code viewport, the way an editor treats a
+  terminal. A glance now tells you which half of the screen is the agent talking and which half is
+  the agent's receipts. Making both panels dark would have been closer to a literal reading of
+  "charcoal containers" and worse at the job.
+- **Violet is reserved, not decorative.** It marks the agent's own presence (the avatar orb), live
+  state (the streaming dot, the active tool pill), and focus. Nothing static and nothing merely
+  structural is violet — so when something on this page glows, something is actually happening.
+- **Recording stays red, and that is a safety decision, not a palette one.** The mic's active state
+  is a danger-red pulse, deliberately not the violet used for "the agent is working". Those two
+  states must never be confusable, because one of them means the microphone is open.
+- **Added a step tag: a header pill naming what the agent is doing right now** ("Tool 2 ·
+  compare_items", "Writing the answer"). It is driven by the same SSE events that already feed the
+  tool log, so it costs nothing new on the server, and it is hidden entirely when no request is in
+  flight — a permanently-visible "idle" pill would be noise.
+- **Kept the two-typeface split from the old design, because it was the one part carrying real
+  meaning.** Sans for prose, mono for every number, identifier, and tool call. That is the same line
+  the system prompt draws between what the model may say and what only code may compute, made
+  visible.
+- **What was left alone.** No attachment affordance was added even though the direction mentions
+  attachment badges — this agent takes no files, and inventing a control that does nothing would be
+  worse than omitting it. Dark mode was not added either: the direction is a light design, and
+  shipping a second theme the night before submission is risk without payoff.

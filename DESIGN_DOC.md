@@ -192,6 +192,84 @@ every provider implements the same single-method `LLMProvider` protocol
 (`app/providers/llm/base.py` — `name`, `model`, `chat()`) and the agent
 loop only ever calls `provider.chat(messages, tools)`.
 
+### 3a. Voice — the bonus, built twice on purpose
+
+The brief calls a chat interface the requirement and voice the bonus.
+There are two voice paths here, and the duplication is deliberate rather
+than indecision.
+
+**Path one: browser-native, zero credentials.** One-shot dictation via
+`SpeechRecognition`, replies read aloud via `speechSynthesis`. No server
+involvement, no key, no cost. It exists because "voice needs an API key
+you have not set" should never be the same sentence as "voice does not
+work at all" — anyone who opens this page gets *something*. Browser
+support is stated rather than hidden: Chrome, Edge and Safari have
+`SpeechRecognition`, Firefox does not, and both controls disable
+themselves with an explanatory tooltip instead of failing on click.
+
+**Path two: conversation mode.** An open microphone, endpointing in the
+browser, real speech models on the server, spoken replies, and barge-in.
+This is the one that is actually a conversation.
+
+| Stage | Where | What |
+|---|---|---|
+| Capture, resample to 16 kHz | Browser | `static/voice.js` |
+| Endpointing (energy VAD) | Browser | 200 ms to open, 800 ms of silence to close, 300 ms pre-roll |
+| Transcription | Server | `POST /voice/transcribe` → `gpt-4o-mini-transcribe` |
+| The turn itself | Server | **the existing `/chat/stream`** — same tools, same guardrails, same scoring |
+| Synthesis | Server | `POST /voice/speak` → `gpt-4o-mini-tts`, one chunk at a time |
+| Barge-in | Both | browser stops audio; `POST /voice/interrupt` fixes the transcript |
+
+**The transcript goes through the existing chat endpoint.** There is no
+`/voice/chat`. A spoken question gets the identical tool surface,
+guardrails, deterministic scoring, and live tool log as a typed one, so
+every claim in this document stays true when you talk to the agent
+instead of typing at it. Voice is a modality here, not a second agent.
+
+**Why the browser does the listening.** The conventional design streams
+audio to the server over a WebSocket and detects turns there. Three
+reasons not to: barge-in gets *faster*, because the microphone and the
+speaker are both in the browser and stopping playback costs zero network
+round-trips; nothing is uploaded during silence; and server-side frame
+energy wants numpy, in a project whose dependency list is four packages.
+What it costs is listed in §4 under what was not built.
+
+**Barge-in is three steps, and the third is the one that matters.**
+Stop playing. Stop synthesizing what has not played. Then rewrite the
+stored reply to only the sentences the user actually heard
+(`app/conversation.py`). The first two are what the user perceives; the
+third is what keeps the next turn coherent. Without it the model believes
+it said five sentences that were never audible, and a follow-up like
+"what was the third one?" answers from text nobody heard. Truncation is
+sentence-granular because sentences are the unit that gets synthesized
+and played — word-level would need per-word timing that neither provider
+returns from its plain synthesis endpoint. The UI redraws the interrupted
+reply to match, so the screen and the transcript never disagree.
+
+**Both speech providers are OpenAI, and that is a cost-of-entry decision
+rather than a preference.** The app already needs an OpenAI key to run
+against a real model, so speech in and speech out add zero new
+credentials: a reviewer who can run the agent at all can also talk to it.
+A second TTS vendor (`TTS_PROVIDER=google`, Neural2) is implemented
+anyway, because an interface with exactly one implementation has never
+been tested as an interface — two makes "we could move to ElevenLabs or
+Cartesia" a statement about work already proven possible.
+
+**What the energy VAD cannot do**, stated rather than discovered: it
+cannot tell a genuine interruption from a backchannel. "Mm-hmm" while the
+agent is talking will stop it. The barge-in threshold is deliberately
+harder to trip than the turn-start threshold (350 ms and +6 dB, versus
+200 ms) because a false barge-in cuts the agent off mid-answer and a
+late one only costs a moment — but the underlying limitation is a
+property of energy VAD, and the fix is a semantic turn detector, not a
+better threshold.
+
+**Echo cancellation is load-bearing.** With an open microphone next to a
+speaker, the agent's own voice would trip the barge-in detector
+continuously. `getUserMedia`'s `echoCancellation` constraint is what
+makes this usable on laptop speakers rather than headphones only.
+
+---
 ---
 
 ## 4. Key tradeoffs
@@ -284,15 +362,20 @@ An honest cut list is worth more than a longer feature list:
   time.
 - **Persistent multi-user history or auth.** In-memory, single-session —
   fine for a live demo, not production.
-- **A real cascaded voice pipeline (STT/LLM/TTS provider stack).** The
-  brief calls voice a bonus; built the cheap browser-native path instead
-  (`SpeechRecognition`/`speechSynthesis` in `static/index.html`, zero
-  backend change) and left the real pipeline out — same reasoning as
-  every other cut here, cheapest thing that actually answers the
-  requirement. Browser support is real and stated, not hidden: Chrome/
-  Edge/Safari, not Firefox; the mic and "voice replies" controls disable
-  themselves with an explanatory title when unsupported rather than
-  failing silently.
+- **Streaming ASR and streaming TTS.** Voice mode transcribes and
+  synthesizes per utterance, not per token. A production stack streams
+  both, so the first words are transcribed while the user is still
+  speaking and the first audio plays while the rest is still being
+  generated. Measured against the real endpoint, synthesis is where this
+  costs the most: about two seconds, almost independent of length. Half
+  of that is hidden by chunking the reply and overlapping requests (§3a),
+  but the floor is real and streaming is the fix. Known divergence with a
+  named upgrade path, not a gap being hidden.
+- **Server-side turn detection.** Endpointing runs in the browser, so the
+  server never sees a waveform and cannot apply a semantic turn detector
+  — the 2026 state of the art, which decides a turn ended because the
+  sentence finished, not because the room went quiet. §3a explains why
+  the split is where it is; this is what it costs.
 - **A production-grade injection classifier.** The regex guardrail
   catches the literal attack shapes tested against it; a fielded system
   would add a model-based detector *on top*, not instead — see "Regex

@@ -124,6 +124,52 @@ ANTHROPIC_LLM_MODEL = os.environ.get("ANTHROPIC_LLM_MODEL", "claude-haiku-4-5-20
 # are more prone to malformed tool-call arguments.
 GROQ_LLM_MODEL = os.environ.get("GROQ_LLM_MODEL", "llama-3.3-70b-versatile")
 
+# ── Voice (optional) ────────────────────────────────────────────────────
+# The chat interface is the deliverable; voice is the brief's stated bonus.
+# Everything below is inert unless the UI's conversation mode is used, and
+# the app starts, serves, and passes its tests with none of it configured.
+#
+# Both default providers are OpenAI, and that is a deliberate cost-of-entry
+# decision rather than a preference: the app already requires an OpenAI key
+# to run against a real model, so speech in and speech out add ZERO new
+# credentials. A reviewer who can run the agent at all can also talk to it.
+# Google TTS is implemented too (app/providers/tts/google_tts.py) and is a
+# one-line switch — it exists to make "swap the vendor" a demonstrated
+# property rather than a claim, since a provider interface with exactly one
+# implementation has never actually been tested as an interface.
+STT_PROVIDER = os.environ.get("STT_PROVIDER", "openai")  # openai
+TTS_PROVIDER = os.environ.get("TTS_PROVIDER", "openai")  # openai | google
+
+# gpt-4o-mini-transcribe over whisper-1: same family, cheaper per minute,
+# and better on proper nouns — which is the whole problem in this domain,
+# where nearly every user turn contains an airport name or a three-letter
+# code. whisper-1 is the fallback because it is the most universally
+# available transcription model on the API, so a key whose tier lacks the
+# newer model still gets working speech instead of an error.
+OPENAI_STT_MODEL = os.environ.get("OPENAI_STT_MODEL", "gpt-4o-mini-transcribe")
+OPENAI_STT_FALLBACK_MODEL = os.environ.get("OPENAI_STT_FALLBACK_MODEL", "whisper-1")
+
+OPENAI_TTS_MODEL = os.environ.get("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+OPENAI_TTS_VOICE = os.environ.get("OPENAI_TTS_VOICE", "alloy")
+
+# Google Cloud Text-to-Speech, if TTS_PROVIDER=google. Neural2 rather than
+# Studio or Chirp3-HD: a clear step up from Standard without the premium
+# tiers' pricing, which is the right point on the curve for a demo.
+GCP_TTS_API_KEY = _env("GCP_TTS_API_KEY", "gcp_tts_api_key")
+GOOGLE_TTS_VOICE = os.environ.get("GOOGLE_TTS_VOICE", "en-US-Neural2-C")
+GOOGLE_TTS_LANGUAGE_CODE = os.environ.get("GOOGLE_TTS_LANGUAGE_CODE", "en-US")
+
+# Upper bound on a single synthesis request. Not a security boundary —
+# this server is a local demo — but an accident bound: nothing should be
+# able to turn one stray reply into an unbounded, billable TTS call.
+TTS_MAX_CHARS = int(os.environ.get("TTS_MAX_CHARS", "4000"))
+
+# Upper bound on one uploaded utterance, in bytes. At 16 kHz mono PCM16
+# (what the browser client sends) 8 MB is a little over four minutes of
+# audio — far past any real spoken question, and short of anything that
+# would tie up the process.
+STT_MAX_UPLOAD_BYTES = int(os.environ.get("STT_MAX_UPLOAD_BYTES", str(8 * 1024 * 1024)))
+
 HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8000"))
 
@@ -138,3 +184,7 @@ def have_anthropic_key() -> bool:
 
 def have_groq_key() -> bool:
     return bool(GROQ_API_KEY)
+
+
+def have_gcp_tts_key() -> bool:
+    return bool(GCP_TTS_API_KEY)

@@ -2,7 +2,9 @@
 
 Deliberately small: one page (static/index.html), a POST /chat/stream
 endpoint (SSE), a non-streaming POST /chat kept for any caller that wants
-a single JSON response, one GET /health. This is the whole web UI. See
+a single JSON response, one GET /health. The optional voice routes live
+next door in app/voice_api.py and are mounted here. This is the whole web
+UI. See
 README "UI scope — what NOT to build" for why it stops here: UI polish is
 not what this brief asks for, and every hour spent on it is an hour not
 spent on the scoring logic and the data.
@@ -37,20 +39,26 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from app import conversation
 from app.agent_loop import AgentResult, MaxTurnsExceeded, ToolLogEntry, run_agent
 from app.config import HOST, PORT
 from app.providers.llm import get_llm_provider
 from app.system_prompt import BASE_SYSTEM_PROMPT
 from app.tools import TOOL_REGISTRY, TOOL_SCHEMAS
+from app.voice_api import router as voice_router
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 app = FastAPI(title="airport-investment-intelligence-agent")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+# Voice: /voice/health, /voice/transcribe, /voice/speak, /voice/interrupt.
+# Additive — the text interface below does not know it exists, and every
+# route here works unchanged with no speech credentials configured.
+app.include_router(voice_router)
 
-# In-memory, single-session history — fine for a single-user demo, not
-# for multi-user production. Scope note, not an oversight; see README.
-_history: list[dict[str, Any]] = []
+# Conversation history lives in app/conversation.py, because the voice
+# endpoints share it. In-memory and process-wide: right for a single-user
+# demo, wrong for multi-user. Scope note, not an oversight; see README.
 
 
 class ChatRequest(BaseModel):
@@ -81,7 +89,7 @@ async def chat(req: ChatRequest) -> dict:
     try:
         result = run_agent(
             user_message=req.message,
-            history=_history,
+            history=conversation.snapshot(),
             provider=provider,
             tool_schemas=TOOL_SCHEMAS,
             tool_registry=TOOL_REGISTRY,
@@ -107,7 +115,7 @@ async def chat(req: ChatRequest) -> dict:
             "turns_used": exc.turns_used,
         }
 
-    _history[:] = result.messages[1:]  # drop system message; run_agent re-adds it each call
+    conversation.replace(result.messages[1:])  # drop system message; run_agent re-adds it each call
     return {
         "reply": result.final_text,
         "tool_log": _tool_log_rows(result.tool_log),
@@ -161,11 +169,11 @@ def _run_agent_in_thread(user_message: str, history: list[dict[str, Any]], provi
 @app.post("/chat/stream")
 async def chat_stream(req: ChatRequest) -> StreamingResponse:
     provider = get_llm_provider()
-    # Snapshot _history now, not inside the worker thread: another
+    # Snapshot the history now, not inside the worker thread: another
     # request could mutate the shared list while this one is still
     # streaming. Same single-session scope limitation as /chat — see the
     # module docstring — just made explicit here instead of implicit.
-    history_snapshot = list(_history)
+    history_snapshot = conversation.snapshot()
     q: "queue.Queue[_StreamEvent]" = queue.Queue()
     threading.Thread(
         target=_run_agent_in_thread, args=(req.message, history_snapshot, provider, q), daemon=True
@@ -186,7 +194,7 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
                 )
             elif event.kind == "done":
                 result: AgentResult = event.payload
-                _history[:] = result.messages[1:]
+                conversation.replace(result.messages[1:])
                 yield _sse("done", {"reply": result.final_text, "incomplete": False, "turns_used": result.turns_used})
                 return
             elif event.kind == "max_turns":
@@ -214,7 +222,7 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
 
 @app.post("/reset")
 async def reset() -> dict:
-    _history.clear()
+    conversation.clear()
     return {"status": "reset"}
 
 

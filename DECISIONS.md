@@ -987,3 +987,96 @@ actually need, and where each comes from:
   attachment badges — this agent takes no files, and inventing a control that does nothing would be
   worse than omitting it. Dark mode was not added either: the direction is a light design, and
   shipping a second theme the night before submission is risk without payoff.
+
+## Voice conversation mode — a real spoken agent, not read-aloud
+
+- **Kept the browser-native path and added a second one, rather than replacing it.** The existing
+  mic button and "voice replies" toggle use the browser's own Web Speech API: no server, no key, no
+  cost. They stay, because "voice needs an API key you have not set" should never be the same
+  sentence as "voice does not work at all" — anyone who opens the page gets something. The new
+  conversation mode sits alongside it and is the one that is actually a conversation: open
+  microphone, real speech models, spoken replies, barge-in.
+- **Both speech providers are OpenAI, and that is about credentials, not quality.** The app already
+  requires an OpenAI key to run against a real model, so putting speech in and speech out on that
+  same key means voice costs a reviewer nothing extra to try. Picking a second vendor for the bonus
+  feature would have made the bonus the hardest part of the setup, which is backwards. Google TTS is
+  implemented as well and is a one-variable switch — that exists because an interface with exactly
+  one implementation has never been tested as an interface, and two makes "we could move to
+  ElevenLabs or Cartesia" a statement about work already proven possible rather than an intention.
+- **The browser does the listening, not the server.** The conventional design opens a WebSocket,
+  streams raw audio up continuously, and runs voice-activity detection server-side. Rejected for
+  three reasons, in order of how much they mattered: (1) barge-in gets *faster* — the thing that has
+  to happen the instant someone talks over the agent is "stop playing audio", and the microphone and
+  the speaker are both in the browser, so doing it locally costs zero network round-trips where
+  routing it through a server adds one to the single most latency-sensitive interaction there is;
+  (2) nothing is uploaded during silence, so it is one request per utterance instead of an open
+  socket carrying mostly nothing; (3) server-side frame energy wants numpy, and this project ships
+  four packages. What it gives up is real and stated: no server-side turn detection, and no
+  server-side view of the waveform for diagnostics.
+- **The transcript goes through the existing `/chat/stream`. There is no `/voice/chat`.** This is
+  the decision the whole feature rests on. A spoken question gets the identical tool surface,
+  guardrails, deterministic scoring, and live tool-call log as a typed one, so every claim in the
+  design doc stays true when you talk to the agent instead of typing at it. Voice is a modality
+  here, not a second agent — and a second endpoint would have been a second code path free to drift
+  away from the first.
+- **Barge-in is three steps and the third is the one that matters.** Stop playing; abandon anything
+  synthesized but not yet played; then rewrite the stored reply to only the sentences actually
+  heard. The first two are what the user perceives. The third is what keeps the next turn coherent —
+  without it the model believes it said five sentences that were never audible, and a follow-up like
+  "what was the third one?" gets answered from text nobody heard. It is also the only one of the
+  three that fails *invisibly*, which is why `app/conversation.py`'s `truncate_last_reply` has nine
+  tests on it while the audio handling has none.
+- **Truncation is sentence-granular, and that is a limit, not a choice.** History can only be
+  rewritten to "what was heard" if the units played match the units requested — which is why the
+  reply is synthesized a chunk at a time rather than all at once. Word-level truncation would need
+  per-word timing, which neither provider returns from its plain synthesis endpoint. The UI redraws
+  the interrupted reply to match what the server stored, so the screen and the transcript never
+  disagree about what was said.
+- **Synthesis requests overlap, with a bounded window.** Measured against the real endpoint,
+  synthesis takes ~2 seconds almost regardless of length — a fixed per-request cost, not a
+  per-character one (10 characters: 1.9s; 123 characters: 2.6s). Requesting chunks strictly one at a
+  time therefore pays that two seconds *between every sentence*, and the reply comes out in audible
+  steps. Three requests in flight closes the gaps. Bounded rather than "fire them all at once"
+  because anything synthesized past the point of an interruption is money spent on audio nobody
+  hears.
+- **Raw PCM in a WAV wrapper, not `MediaRecorder`.** `MediaRecorder` would give smaller uploads, but
+  its chunks after the first are not independently decodable, so capturing "the utterance and 300ms
+  before it" means reassembling around a header — fragile in exchange for bandwidth that does not
+  matter over localhost. Capturing raw PCM gives exact control over the pre-roll window, and the
+  pre-roll is not optional: the gate only opens *after* speech has started, so without it every
+  transcript loses its first syllable.
+- **Audio is posted as a raw request body, not a multipart form.** Multipart would have added
+  `python-multipart` as a fifth dependency to move exactly one file per request with no accompanying
+  fields — the content-type header already says everything the form would have.
+- **The barge-in threshold is deliberately harder to trip than the turn-start threshold** (350ms and
+  +6dB, versus 200ms). Asymmetric on purpose: a false barge-in cuts the agent off mid-answer, a late
+  one costs a moment. There is a test asserting the asymmetry, so a refactor cannot quietly
+  equalize them.
+- **Echo cancellation is load-bearing, not a nicety.** With an open microphone next to a speaker the
+  agent's own voice reaches the microphone and would trip barge-in continuously.
+  `getUserMedia`'s `echoCancellation` constraint is what makes this work on laptop speakers rather
+  than headphones only.
+- **Named limitation: energy VAD cannot tell an interruption from a backchannel.** "Mm-hmm" while
+  the agent is talking will stop it. That is a property of energy-based detection, and the fix is a
+  semantic turn detector, not a better threshold. Stated in the README and the design doc rather
+  than left to be discovered.
+- **`ScriptProcessorNode`, though it is deprecated.** An `AudioWorklet` needs a separate module file
+  and a message port to move a 2048-frame buffer off the main thread — a hop three orders of
+  magnitude smaller than the network round-trip that actually dominates. It is universally
+  supported, and replacing it is contained to one method.
+- **Upstream errors never reach the browser verbatim.** Both speech calls send an API key in an
+  Authorization header, and an upstream 4xx body can echo request details back. The endpoints log
+  the exception type and return a flat message; two tests assert that a provider raising an error
+  containing a fake key produces a response with no trace of it.
+- **`/voice/health` exists so the UI can refuse honestly.** It reports whether voice can work and,
+  if not, which variable is missing — checked without constructing a provider, since constructing
+  one raises and this is the endpoint whose whole job is to answer the question calmly. The button
+  is disabled with the reason on it. Whoever runs this did not configure it, and a 500 in a console
+  nobody is watching is not an explanation.
+- **What is not tested, said plainly.** The state machine around the audio — gate opening, silence
+  timing, the barge-in transition — needs a real microphone and a real `AudioContext`, and a fake of
+  both would only test the fake. The pure functions under it are tested (chunk splitting, frame
+  energy, resampling, PCM clamping, and the tuning invariants), the server side is tested against
+  fake providers, and the end-to-end path was verified by hand: synthesizing a spoken question
+  through `/voice/speak` and feeding that audio back into `/voice/transcribe` returned it correctly,
+  proper noun included.

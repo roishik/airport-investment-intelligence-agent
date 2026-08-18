@@ -604,6 +604,91 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
 #send:hover { filter: brightness(1.07); }
 #send:focus-visible { outline: 2px solid var(--violet-ink); outline-offset: 2px; }
 
+/* ── Voice conversation mode ───────────────────────────────────────────
+   The composer becomes the voice panel rather than growing a second row:
+   in voice mode there is nothing to type, and leaving a live text field
+   alongside an open microphone invites the question of which one is
+   listening. One control surface, one meaning. */
+#voice-bar { display: none; align-items: center; gap: 0.8rem; flex: 1; min-width: 0; padding: 0.3rem 0; }
+#composer.voice-active #input,
+#composer.voice-active #mic,
+#composer.voice-active #reset,
+#composer.voice-active #voice-start,
+#composer.voice-active #send { display: none; }
+#composer.voice-active #voice-bar { display: flex; }
+#composer.voice-active {
+  border-color: color-mix(in srgb, var(--violet) 50%, transparent);
+  box-shadow: var(--shadow-float), 0 0 0 4px rgba(124, 58, 237, 0.10);
+}
+
+.voice-state { font-size: 0.9rem; font-weight: 550; color: var(--ink); white-space: nowrap; }
+.voice-hint {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.voice-spacer { flex: 1; min-width: 0; }
+
+/* Live input level. Not decoration: with an open microphone the first
+   question is always "can it hear me", and a meter answers it before the
+   user has to test it by talking. */
+.level { display: flex; align-items: center; gap: 2px; height: 20px; flex-shrink: 0; }
+.level i {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--hairline-strong);
+  transition: height 0.08s linear, background 0.08s linear;
+}
+.level i.lit { background: linear-gradient(180deg, var(--violet-bright), var(--violet)); }
+
+#voice-end {
+  flex-shrink: 0;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--surface-sunken);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 0.55rem 1.05rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+#voice-end:hover { border-color: var(--hairline-strong); color: var(--ink); }
+#voice-end:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+
+/* The mode indicator: unmistakable, and it names the providers, because
+   "am I talking to a browser API or to a real speech model" is the first
+   thing anyone looking at this will want to know. */
+#voice-mode-chip {
+  display: none;
+  border-color: color-mix(in srgb, var(--violet) 40%, transparent);
+  background: var(--violet-wash);
+  color: var(--violet-ink);
+}
+#voice-mode-chip.on { display: inline-flex; }
+#voice-mode-chip .orb { width: 12px; height: 12px; box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.14); }
+
+/* A reply the user talked over is shown as what they actually heard,
+   with the cut marked — the same truncation the server applies to the
+   transcript, made visible instead of silent. */
+.interrupted-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.interrupted-note::before { content: ""; width: 14px; border-top: 1px solid var(--hairline-strong); }
+
 @media (max-width: 560px) {
   body { padding: 1.25rem 0.9rem; }
   #composer { flex-wrap: wrap; border-radius: var(--r-lg); padding: 0.5rem 0.6rem; }
@@ -621,7 +706,8 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
     <p class="tagline">Ask about expansion candidates, congestion, or unmet demand. Every score is computed by code you can read — the model only explains it.</p>
     <div class="status-row">
       <div id="status" class="chip">loading</div>
-      <button id="voice-toggle" class="chip" type="button" aria-pressed="false" title="Read the agent's replies aloud">Voice replies · off</button>
+      <button id="voice-toggle" class="chip" type="button" aria-pressed="false" title="Read the agent's replies aloud using your browser's own speech synthesis">Voice replies · off</button>
+      <span id="voice-mode-chip" class="chip"><span class="orb live" aria-hidden="true"></span><span id="voice-mode-label">voice conversation</span></span>
     </div>
   </header>
 
@@ -661,11 +747,25 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
         <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>
       </svg>
     </button>
+    <button id="voice-start" class="icon-btn" type="button" title="Start a spoken conversation" aria-label="Start a spoken conversation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 10v4"/><path d="M8 6v12"/><path d="M12 3v18"/><path d="M16 6v12"/><path d="M20 10v4"/>
+      </svg>
+    </button>
     <button id="send" type="button">Send</button>
+    <div id="voice-bar">
+      <span class="orb live" aria-hidden="true"></span>
+      <span id="voice-state" class="voice-state" role="status" aria-live="polite">Starting</span>
+      <span id="voice-level" class="level" aria-hidden="true"></span>
+      <span id="voice-hint" class="voice-hint"></span>
+      <span class="voice-spacer"></span>
+      <button id="voice-end" type="button">End voice</button>
+    </div>
   </div>
 </main>
 
 <script src="/static/markdown.js"></script>
+<script src="/static/voice.js"></script>
 <script>
 const chatEl = document.getElementById('chat');
 const chatEmptyEl = document.getElementById('chat-empty');
@@ -823,15 +923,20 @@ async function loadHealth() {
   }
 }
 
+// One turn of the conversation, typed or spoken. Returns the agent's
+// reply text so the voice path can speak it; the text path ignores the
+// return value. Both go through the identical endpoint, so there is no
+// second code path that could drift — a spoken question gets the same
+// tools, guardrails, and live tool log as a typed one.
+//
 // SSE events arrive as "event: <name>\ndata: <json>\n\n" blocks, and a
 // fetch chunk boundary can land in the middle of one — so this buffers
 // across reads and only parses complete "\n\n"-terminated blocks,
 // leaving any trailing partial block in the buffer for the next chunk.
-async function send() {
-  const text = inputEl.value.trim();
-  if (!text) return;
-  inputEl.value = '';
+async function runTurn(text) {
+  if (!text) return null;
   addMessage('user', text);
+  let reply = null;
   setStatus('thinking');
   setStep('Reading the question');
   liveDotEl.classList.add('on');
@@ -865,8 +970,12 @@ async function send() {
           addToolLogEntry(data);
         } else if (eventName === 'done') {
           setStep('Writing the answer');
-          addMessage('agent', data.reply);
-          speak(data.reply);
+          reply = data.reply;
+          lastAgentMessageEl = addMessage('agent', data.reply);
+          // Browser-native read-aloud is for the TEXT path only. In voice
+          // mode the server-side synthesizer speaks the reply, and having
+          // both would mean two voices reading the same sentence.
+          if (!voiceConversation) speak(data.reply);
         } else if (eventName === 'error') {
           addMessage('agent', `(agent error: ${data.message})`);
         }
@@ -880,6 +989,14 @@ async function send() {
     setStep(null);
     loadHealth();
   }
+  return reply;
+}
+
+function send() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  inputEl.value = '';
+  runTurn(text);
 }
 
 document.getElementById('send').addEventListener('click', send);
@@ -901,9 +1018,147 @@ document.getElementById('reset').addEventListener('click', async () => {
   chatEmptyEl.style.display = '';
   toolLogEmptyEl.style.display = '';
   toolSeq = 0;
+  lastAgentMessageEl = null;
 });
 
+// ── Voice conversation mode ────────────────────────────────────────────
+// The second, real voice path: an open microphone, endpointing in the
+// browser, server-side transcription and synthesis, and barge-in. The
+// browser-native controls above stay exactly as they were — they need no
+// credentials, and "no key configured" must never mean "no voice at
+// all". See static/voice.js for the mechanism and the trade-offs.
+const voiceStartBtn = document.getElementById('voice-start');
+const voiceEndBtn = document.getElementById('voice-end');
+const voiceBarStateEl = document.getElementById('voice-state');
+const voiceHintEl = document.getElementById('voice-hint');
+const voiceLevelEl = document.getElementById('voice-level');
+const voiceModeChip = document.getElementById('voice-mode-chip');
+const voiceModeLabel = document.getElementById('voice-mode-label');
+const composerEl = document.getElementById('composer');
+
+const LEVEL_BARS = 14;
+// Range the meter spans. -55 dBFS is around a quiet room's noise floor
+// and -12 is a loud close-mic voice, so this maps the span people
+// actually occupy rather than the full scale, where normal speech would
+// sit in the bottom two bars.
+const LEVEL_MIN_DBFS = -55;
+const LEVEL_MAX_DBFS = -12;
+
+for (let i = 0; i < LEVEL_BARS; i++) voiceLevelEl.appendChild(document.createElement('i'));
+const levelBars = [...voiceLevelEl.children];
+
+let voiceConversation = null;
+let lastAgentMessageEl = null;
+
+// Each state gets a label and, where it helps, a line telling the user
+// what they can do — most importantly that talking over the agent works,
+// which is not discoverable otherwise.
+const VOICE_STATE_TEXT = {
+  listening: ['Listening', 'Just talk — it will hear you stop'],
+  capturing: ['Hearing you', ''],
+  transcribing: ['Transcribing', ''],
+  thinking: ['Thinking', 'Running tools'],
+  speaking: ['Speaking', 'Talk over it to interrupt'],
+  idle: ['Off', ''],
+};
+
+function setVoiceLevel(dbfs) {
+  const ratio = (dbfs - LEVEL_MIN_DBFS) / (LEVEL_MAX_DBFS - LEVEL_MIN_DBFS);
+  const lit = Math.max(0, Math.min(LEVEL_BARS, Math.round(ratio * LEVEL_BARS)));
+  for (let i = 0; i < LEVEL_BARS; i++) {
+    const on = i < lit;
+    levelBars[i].classList.toggle('lit', on);
+    levelBars[i].style.height = on ? `${6 + (i % 4) * 3}px` : '4px';
+  }
+}
+
+// A reply the user talked over is redrawn as only what they heard, with
+// the cut marked. This mirrors exactly what /voice/interrupt does to the
+// server-side transcript — showing the full text while the model
+// remembers a shorter one would make the screen and the conversation
+// disagree.
+function markLastReplyInterrupted(spokenPrefix) {
+  if (!lastAgentMessageEl) return;
+  const content = lastAgentMessageEl.querySelector('.content');
+  if (!content) return;
+  content.innerHTML = spokenPrefix.trim() ? renderMarkdown(spokenPrefix) : '';
+  const note = document.createElement('div');
+  note.className = 'interrupted-note';
+  note.textContent = spokenPrefix.trim() ? 'interrupted here' : 'interrupted before it spoke';
+  content.appendChild(note);
+}
+
+async function startVoiceMode() {
+  if (voiceConversation) return;
+  voiceConversation = new VoiceConversation({
+    onState: (state) => {
+      const [label, hint] = VOICE_STATE_TEXT[state] || [state, ''];
+      voiceBarStateEl.textContent = label;
+      voiceHintEl.textContent = hint;
+      liveDotEl.classList.toggle('on', state === 'thinking');
+      if (state !== 'speaking' && state !== 'capturing') setVoiceLevel(-120);
+    },
+    onLevel: setVoiceLevel,
+    onError: (message) => {
+      setStatus(message, true);
+      addMessage('agent', `(voice: ${message})`);
+    },
+    onSpokenPrefix: markLastReplyInterrupted,
+    // The spoken turn goes through the SAME agent path as a typed one:
+    // same tools, same guardrails, same deterministic scoring, same live
+    // tool log on the right. Voice is a modality here, not a second
+    // agent, and this one line is where that is true or not.
+    needsReply: (transcript) => runTurn(transcript),
+  });
+
+  composerEl.classList.add('voice-active');
+  voiceModeChip.classList.add('on');
+  try {
+    await voiceConversation.start();
+  } catch (err) {
+    stopVoiceMode();
+    const reason = err && err.name === 'NotAllowedError'
+      ? 'microphone permission denied'
+      : `microphone unavailable — ${err.message}`;
+    setStatus(reason, true);
+  }
+}
+
+function stopVoiceMode() {
+  voiceConversation?.stop();
+  voiceConversation = null;
+  composerEl.classList.remove('voice-active');
+  voiceModeChip.classList.remove('on');
+  liveDotEl.classList.remove('on');
+  setVoiceLevel(-120);
+  inputEl.focus();
+}
+
+// Voice mode is offered only when the server says it can actually work,
+// and when it cannot, the button says why. A live control that fails on
+// click is worse than a disabled one with a reason: whoever runs this did
+// not configure it, and a 500 in a console nobody is watching is not an
+// explanation.
+async function loadVoiceHealth() {
+  try {
+    const res = await fetch('/voice/health');
+    const data = await res.json();
+    voiceStartBtn.disabled = !data.available;
+    voiceStartBtn.title = data.available
+      ? `Start a spoken conversation (${data.stt.provider} speech-to-text, ${data.tts.provider} text-to-speech)`
+      : `Voice conversation unavailable — ${data.reason}`;
+    voiceModeLabel.textContent = `voice · ${data.stt.provider}→${data.tts.provider}`;
+  } catch (e) {
+    voiceStartBtn.disabled = true;
+    voiceStartBtn.title = 'Voice conversation unavailable — could not reach the server.';
+  }
+}
+
+voiceStartBtn.addEventListener('click', startVoiceMode);
+voiceEndBtn.addEventListener('click', stopVoiceMode);
+
 loadHealth();
+loadVoiceHealth();
 </script>
 </body>
 </html>

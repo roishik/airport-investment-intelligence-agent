@@ -17,7 +17,7 @@ analysis.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/pytest -q                     # 186 tests, no key, no network
+.venv/bin/pytest -q                     # 257 tests, no key, no network
 .venv/bin/python -m app.cli             # terminal chat, mock LLM
 .venv/bin/uvicorn app.main:app --reload # web chat at http://127.0.0.1:8000
 ```
@@ -50,10 +50,16 @@ app/
   system_prompt.py      the "never compute a number yourself" contract
   agent_loop.py         the hand-rolled loop (~70 lines, no framework)
   config.py             env loading + provider selection
+  conversation.py       the in-memory history, shared by text and voice
   providers/llm/        swappable backends: mock | openai | anthropic | groq
+  providers/stt/        speech-to-text: openai
+  providers/tts/        text-to-speech: openai | google
   main.py               FastAPI web chat (one page, one endpoint)
+  voice_api.py          optional voice routes (transcribe / speak / interrupt)
   cli.py                terminal chat
-static/index.html       the web UI: chat + live tool-call log + voice (Web Speech API)
+static/index.html       the web UI: chat + live tool-call log + voice controls
+static/markdown.js      renders the agent's markdown replies (escape-first)
+static/voice.js         mic capture, endpointing, playback, barge-in
 evals/                  runnable eval harness — 26 seeded failure-mode tasks
 tests/                  pytest suite
 ```
@@ -138,6 +144,48 @@ injection, explanation-quality and robustness, with deterministic graders
 plus an LLM judge that was itself validated against hand labels. See
 `evals/README.md` and `evaluation_plan.md`.
 
+## Voice
+
+Voice is the brief's bonus. There are two paths, and which one you get
+depends only on whether a key is configured.
+
+**Without any key** — the mic button dictates your question, and the
+"Voice replies" toggle reads answers aloud. Both use the browser's own
+Web Speech API: no server, no cost. Chrome, Edge and Safari support
+speech recognition; Firefox does not, and the controls disable
+themselves with an explanation rather than failing on click.
+
+**With `OPENAI_API_KEY` set** — the waveform button starts *conversation
+mode*: an open microphone, real speech models, spoken replies, and
+barge-in. Talk; it hears you stop and answers. Talk over it and it stops
+mid-sentence.
+
+```bash
+OPENAI_API_KEY=sk-...     # the same key the agent already uses
+```
+
+No second credential: speech-to-text and text-to-speech both default to
+OpenAI precisely so that anyone who can run the agent can also talk to
+it. `GET /voice/health` reports whether voice is available and, if not,
+which variable is missing — the UI reads it and puts the reason on the
+disabled button.
+
+The spoken turn goes through **the same `/chat/stream` endpoint as a
+typed one**: same tools, same guardrails, same deterministic scoring,
+same live tool-call log. Voice is a modality, not a second agent.
+
+Barge-in does three things, and the third is the one worth looking at:
+it stops playback, abandons anything not yet played, and then rewrites
+the stored reply to only the sentences you actually heard
+(`app/conversation.py`). Without that last step the model believes it
+said things you never heard, and the next answer is built on a
+conversation that did not happen.
+
+Switching the voice vendor is one variable, like every other provider
+here — `TTS_PROVIDER=google` plus `GCP_TTS_API_KEY` uses Google Neural2
+instead. See `DESIGN_DOC.md` §3a for the full architecture and the
+trade-offs, including what the energy-based endpointing cannot do.
+
 ## Scope and limitations
 
 `ASSUMPTIONS.md` is the canonical version — every data gap, unit
@@ -160,13 +208,23 @@ conversion, and staleness date is there. Highlights:
   behind logins/bot-walls) — congestion leans on capacity/utilization
   proxies, not measured delay minutes.
 - No persistent multi-user history or auth — in-memory, single-session.
+- Voice transcribes and synthesizes per utterance, not streaming per
+  token; endpointing is energy-based, so it cannot tell an interruption
+  from a backchannel ("mm-hmm" while the agent talks will stop it).
 
 ## Tests
 
 ```bash
-.venv/bin/pytest -q     # 186 passing
+.venv/bin/pytest -q     # 257 passing
 ```
 
 No network, no API key, no mocking of the pure modules — `scoring.py`,
 `analytics.py` and `entity_resolution.py` are pure functions and are
-tested as such.
+tested as such. The voice endpoints are tested against fake providers, so
+they need no credentials either.
+
+Two test files (`test_markdown_renderer.py`, `test_voice_client.py`)
+exercise the shipped JavaScript by running it under `node`, and **skip
+cleanly if `node` is not installed** — adding an npm toolchain to a
+four-package Python project would have cost more than it returns, and
+`pytest` must stay green on a bare clone with zero setup.

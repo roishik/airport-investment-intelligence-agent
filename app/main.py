@@ -33,9 +33,8 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 app = FastAPI(title="airport-investment-intelligence-agent")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# In-memory, single-session history — fine for a solo demo/interview
-# screen-share, not for multi-user production. Scope note, not an
-# oversight; see README.
+# In-memory, single-session history — fine for a single-user demo, not
+# for multi-user production. Scope note, not an oversight; see README.
 _history: list[dict[str, Any]] = []
 
 

@@ -1,0 +1,2587 @@
+{
+  "_meta": {
+    "description": "FAA airport Locid -> the county (FIPS) its coordinates fall in. The join key between candidates.json and Census county population.",
+    "source": "US Census Geocoder (geocoding.geo.census.gov), coordinates -> Counties layer",
+    "fetched_at": "2026-08-18",
+    "resolved_count": 515,
+    "unresolved_locids": [],
+    "unresolved_note": "Airports whose coordinates fall outside any US county polygon -- expected for territories the Census county layer does not cover (Guam, American Samoa, N. Mariana Is.). These simply get no population fields; they are not dropped from candidates.json."
+  },
+  "airports": {
+    "0AK": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "16A": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "1G4": {
+      "county_fips": "04015",
+      "county_name": "Mohave County",
+      "state_fips": "04"
+    },
+    "2A9": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "4A2": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "A61": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "ABE": {
+      "county_fips": "42077",
+      "county_name": "Lehigh County",
+      "state_fips": "42"
+    },
+    "ABI": {
+      "county_fips": "48441",
+      "county_name": "Taylor County",
+      "state_fips": "48"
+    },
+    "ABQ": {
+      "county_fips": "35001",
+      "county_name": "Bernalillo County",
+      "state_fips": "35"
+    },
+    "ABR": {
+      "county_fips": "46013",
+      "county_name": "Brown County",
+      "state_fips": "46"
+    },
+    "ABY": {
+      "county_fips": "13095",
+      "county_name": "Dougherty County",
+      "state_fips": "13"
+    },
+    "ACK": {
+      "county_fips": "25019",
+      "county_name": "Nantucket County",
+      "state_fips": "25"
+    },
+    "ACT": {
+      "county_fips": "48309",
+      "county_name": "McLennan County",
+      "state_fips": "48"
+    },
+    "ACV": {
+      "county_fips": "06023",
+      "county_name": "Humboldt County",
+      "state_fips": "06"
+    },
+    "ACY": {
+      "county_fips": "34001",
+      "county_name": "Atlantic County",
+      "state_fips": "34"
+    },
+    "ADK": {
+      "county_fips": "02016",
+      "county_name": "Aleutians West Census Area",
+      "state_fips": "02"
+    },
+    "ADQ": {
+      "county_fips": "02150",
+      "county_name": "Kodiak Island Borough",
+      "state_fips": "02"
+    },
+    "AEX": {
+      "county_fips": "22079",
+      "county_name": "Rapides Parish",
+      "state_fips": "22"
+    },
+    "AFE": {
+      "county_fips": "02198",
+      "county_name": "Prince of Wales-Hyder Census Area",
+      "state_fips": "02"
+    },
+    "AGS": {
+      "county_fips": "13245",
+      "county_name": "Richmond County",
+      "state_fips": "13"
+    },
+    "AIA": {
+      "county_fips": "31013",
+      "county_name": "Box Butte County",
+      "state_fips": "31"
+    },
+    "AKI": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "AKN": {
+      "county_fips": "02060",
+      "county_name": "Bristol Bay Borough",
+      "state_fips": "02"
+    },
+    "AKP": {
+      "county_fips": "02185",
+      "county_name": "North Slope Borough",
+      "state_fips": "02"
+    },
+    "AKW": {
+      "county_fips": "02198",
+      "county_name": "Prince of Wales-Hyder Census Area",
+      "state_fips": "02"
+    },
+    "ALB": {
+      "county_fips": "36001",
+      "county_name": "Albany County",
+      "state_fips": "36"
+    },
+    "ALO": {
+      "county_fips": "19013",
+      "county_name": "Black Hawk County",
+      "state_fips": "19"
+    },
+    "ALS": {
+      "county_fips": "08003",
+      "county_name": "Alamosa County",
+      "state_fips": "08"
+    },
+    "ALW": {
+      "county_fips": "53071",
+      "county_name": "Walla Walla County",
+      "state_fips": "53"
+    },
+    "AMA": {
+      "county_fips": "48375",
+      "county_name": "Potter County",
+      "state_fips": "48"
+    },
+    "ANC": {
+      "county_fips": "02020",
+      "county_name": "Anchorage Municipality",
+      "state_fips": "02"
+    },
+    "ANI": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "AOO": {
+      "county_fips": "42013",
+      "county_name": "Blair County",
+      "state_fips": "42"
+    },
+    "APN": {
+      "county_fips": "26007",
+      "county_name": "Alpena County",
+      "state_fips": "26"
+    },
+    "AQH": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "ART": {
+      "county_fips": "36045",
+      "county_name": "Jefferson County",
+      "state_fips": "36"
+    },
+    "ASE": {
+      "county_fips": "08097",
+      "county_name": "Pitkin County",
+      "state_fips": "08"
+    },
+    "ATL": {
+      "county_fips": "13063",
+      "county_name": "Clayton County",
+      "state_fips": "13"
+    },
+    "ATW": {
+      "county_fips": "55087",
+      "county_name": "Outagamie County",
+      "state_fips": "55"
+    },
+    "ATY": {
+      "county_fips": "46029",
+      "county_name": "Codington County",
+      "state_fips": "46"
+    },
+    "AUG": {
+      "county_fips": "23011",
+      "county_name": "Kennebec County",
+      "state_fips": "23"
+    },
+    "AUK": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "AUS": {
+      "county_fips": "48453",
+      "county_name": "Travis County",
+      "state_fips": "48"
+    },
+    "AVL": {
+      "county_fips": "37021",
+      "county_name": "Buncombe County",
+      "state_fips": "37"
+    },
+    "AVP": {
+      "county_fips": "42079",
+      "county_name": "Luzerne County",
+      "state_fips": "42"
+    },
+    "AWI": {
+      "county_fips": "02185",
+      "county_name": "North Slope Borough",
+      "state_fips": "02"
+    },
+    "AZO": {
+      "county_fips": "26077",
+      "county_name": "Kalamazoo County",
+      "state_fips": "26"
+    },
+    "BDL": {
+      "county_fips": "09110",
+      "county_name": "Capitol Planning Region",
+      "state_fips": "09"
+    },
+    "BET": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "BFD": {
+      "county_fips": "42083",
+      "county_name": "McKean County",
+      "state_fips": "42"
+    },
+    "BFF": {
+      "county_fips": "31157",
+      "county_name": "Scotts Bluff County",
+      "state_fips": "31"
+    },
+    "BFI": {
+      "county_fips": "53033",
+      "county_name": "King County",
+      "state_fips": "53"
+    },
+    "BFL": {
+      "county_fips": "06029",
+      "county_name": "Kern County",
+      "state_fips": "06"
+    },
+    "BGM": {
+      "county_fips": "36007",
+      "county_name": "Broome County",
+      "state_fips": "36"
+    },
+    "BGR": {
+      "county_fips": "23019",
+      "county_name": "Penobscot County",
+      "state_fips": "23"
+    },
+    "BHB": {
+      "county_fips": "23009",
+      "county_name": "Hancock County",
+      "state_fips": "23"
+    },
+    "BHM": {
+      "county_fips": "01073",
+      "county_name": "Jefferson County",
+      "state_fips": "01"
+    },
+    "BID": {
+      "county_fips": "44009",
+      "county_name": "Washington County",
+      "state_fips": "44"
+    },
+    "BIH": {
+      "county_fips": "06027",
+      "county_name": "Inyo County",
+      "state_fips": "06"
+    },
+    "BIL": {
+      "county_fips": "30111",
+      "county_name": "Yellowstone County",
+      "state_fips": "30"
+    },
+    "BIS": {
+      "county_fips": "38015",
+      "county_name": "Burleigh County",
+      "state_fips": "38"
+    },
+    "BJI": {
+      "county_fips": "27007",
+      "county_name": "Beltrami County",
+      "state_fips": "27"
+    },
+    "BKW": {
+      "county_fips": "54081",
+      "county_name": "Raleigh County",
+      "state_fips": "54"
+    },
+    "BLI": {
+      "county_fips": "53073",
+      "county_name": "Whatcom County",
+      "state_fips": "53"
+    },
+    "BLV": {
+      "county_fips": "17163",
+      "county_name": "St. Clair County",
+      "state_fips": "17"
+    },
+    "BMI": {
+      "county_fips": "17113",
+      "county_name": "McLean County",
+      "state_fips": "17"
+    },
+    "BNA": {
+      "county_fips": "47037",
+      "county_name": "Davidson County",
+      "state_fips": "47"
+    },
+    "BOI": {
+      "county_fips": "16001",
+      "county_name": "Ada County",
+      "state_fips": "16"
+    },
+    "BOS": {
+      "county_fips": "25025",
+      "county_name": "Suffolk County",
+      "state_fips": "25"
+    },
+    "BPT": {
+      "county_fips": "48245",
+      "county_name": "Jefferson County",
+      "state_fips": "48"
+    },
+    "BQK": {
+      "county_fips": "13127",
+      "county_name": "Glynn County",
+      "state_fips": "13"
+    },
+    "BQN": {
+      "county_fips": "72005",
+      "county_name": "Aguadilla Municipio",
+      "state_fips": "72"
+    },
+    "BRD": {
+      "county_fips": "27035",
+      "county_name": "Crow Wing County",
+      "state_fips": "27"
+    },
+    "BRL": {
+      "county_fips": "19057",
+      "county_name": "Des Moines County",
+      "state_fips": "19"
+    },
+    "BRO": {
+      "county_fips": "48061",
+      "county_name": "Cameron County",
+      "state_fips": "48"
+    },
+    "BRW": {
+      "county_fips": "02185",
+      "county_name": "North Slope Borough",
+      "state_fips": "02"
+    },
+    "BTM": {
+      "county_fips": "30093",
+      "county_name": "Silver Bow County",
+      "state_fips": "30"
+    },
+    "BTR": {
+      "county_fips": "22033",
+      "county_name": "East Baton Rouge Parish",
+      "state_fips": "22"
+    },
+    "BTV": {
+      "county_fips": "50007",
+      "county_name": "Chittenden County",
+      "state_fips": "50"
+    },
+    "BUF": {
+      "county_fips": "36029",
+      "county_name": "Erie County",
+      "state_fips": "36"
+    },
+    "BUR": {
+      "county_fips": "06037",
+      "county_name": "Los Angeles County",
+      "state_fips": "06"
+    },
+    "BVK": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "BVU": {
+      "county_fips": "02122",
+      "county_name": "Kenai Peninsula Borough",
+      "state_fips": "02"
+    },
+    "BWI": {
+      "county_fips": "24003",
+      "county_name": "Anne Arundel County",
+      "state_fips": "24"
+    },
+    "BZN": {
+      "county_fips": "30031",
+      "county_name": "Gallatin County",
+      "state_fips": "30"
+    },
+    "CAE": {
+      "county_fips": "45063",
+      "county_name": "Lexington County",
+      "state_fips": "45"
+    },
+    "CAK": {
+      "county_fips": "39153",
+      "county_name": "Summit County",
+      "state_fips": "39"
+    },
+    "CDB": {
+      "county_fips": "02013",
+      "county_name": "Aleutians East Borough",
+      "state_fips": "02"
+    },
+    "CDC": {
+      "county_fips": "49021",
+      "county_name": "Iron County",
+      "state_fips": "49"
+    },
+    "CDV": {
+      "county_fips": "02063",
+      "county_name": "Chugach Census Area",
+      "state_fips": "02"
+    },
+    "CEC": {
+      "county_fips": "06015",
+      "county_name": "Del Norte County",
+      "state_fips": "06"
+    },
+    "CEZ": {
+      "county_fips": "08083",
+      "county_name": "Montezuma County",
+      "state_fips": "08"
+    },
+    "CFK": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "CGI": {
+      "county_fips": "29201",
+      "county_name": "Scott County",
+      "state_fips": "29"
+    },
+    "CHA": {
+      "county_fips": "47065",
+      "county_name": "Hamilton County",
+      "state_fips": "47"
+    },
+    "CHO": {
+      "county_fips": "51003",
+      "county_name": "Albemarle County",
+      "state_fips": "51"
+    },
+    "CHS": {
+      "county_fips": "45019",
+      "county_name": "Charleston County",
+      "state_fips": "45"
+    },
+    "CID": {
+      "county_fips": "19113",
+      "county_name": "Linn County",
+      "state_fips": "19"
+    },
+    "CIU": {
+      "county_fips": "26033",
+      "county_name": "Chippewa County",
+      "state_fips": "26"
+    },
+    "CKB": {
+      "county_fips": "54033",
+      "county_name": "Harrison County",
+      "state_fips": "54"
+    },
+    "CLE": {
+      "county_fips": "39035",
+      "county_name": "Cuyahoga County",
+      "state_fips": "39"
+    },
+    "CLL": {
+      "county_fips": "48041",
+      "county_name": "Brazos County",
+      "state_fips": "48"
+    },
+    "CLT": {
+      "county_fips": "37119",
+      "county_name": "Mecklenburg County",
+      "state_fips": "37"
+    },
+    "CMH": {
+      "county_fips": "39049",
+      "county_name": "Franklin County",
+      "state_fips": "39"
+    },
+    "CMI": {
+      "county_fips": "17019",
+      "county_name": "Champaign County",
+      "state_fips": "17"
+    },
+    "CMX": {
+      "county_fips": "26061",
+      "county_name": "Houghton County",
+      "state_fips": "26"
+    },
+    "CNM": {
+      "county_fips": "35015",
+      "county_name": "Eddy County",
+      "state_fips": "35"
+    },
+    "CNY": {
+      "county_fips": "49019",
+      "county_name": "Grand County",
+      "state_fips": "49"
+    },
+    "COD": {
+      "county_fips": "56029",
+      "county_name": "Park County",
+      "state_fips": "56"
+    },
+    "COS": {
+      "county_fips": "08041",
+      "county_name": "El Paso County",
+      "state_fips": "08"
+    },
+    "COU": {
+      "county_fips": "29019",
+      "county_name": "Boone County",
+      "state_fips": "29"
+    },
+    "CPR": {
+      "county_fips": "56025",
+      "county_name": "Natrona County",
+      "state_fips": "56"
+    },
+    "CPX": {
+      "county_fips": "72049",
+      "county_name": "Culebra Municipio",
+      "state_fips": "72"
+    },
+    "CRP": {
+      "county_fips": "48355",
+      "county_name": "Nueces County",
+      "state_fips": "48"
+    },
+    "CRQ": {
+      "county_fips": "06073",
+      "county_name": "San Diego County",
+      "state_fips": "06"
+    },
+    "CRW": {
+      "county_fips": "54039",
+      "county_name": "Kanawha County",
+      "state_fips": "54"
+    },
+    "CSG": {
+      "county_fips": "13215",
+      "county_name": "Muscogee County",
+      "state_fips": "13"
+    },
+    "CVG": {
+      "county_fips": "21015",
+      "county_name": "Boone County",
+      "state_fips": "21"
+    },
+    "CVN": {
+      "county_fips": "35009",
+      "county_name": "Curry County",
+      "state_fips": "35"
+    },
+    "CWA": {
+      "county_fips": "55073",
+      "county_name": "Marathon County",
+      "state_fips": "55"
+    },
+    "CXF": {
+      "county_fips": "02290",
+      "county_name": "Yukon-Koyukuk Census Area",
+      "state_fips": "02"
+    },
+    "CYS": {
+      "county_fips": "56021",
+      "county_name": "Laramie County",
+      "state_fips": "56"
+    },
+    "D76": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "DAB": {
+      "county_fips": "12127",
+      "county_name": "Volusia County",
+      "state_fips": "12"
+    },
+    "DAL": {
+      "county_fips": "48113",
+      "county_name": "Dallas County",
+      "state_fips": "48"
+    },
+    "DAY": {
+      "county_fips": "39113",
+      "county_name": "Montgomery County",
+      "state_fips": "39"
+    },
+    "DBQ": {
+      "county_fips": "19061",
+      "county_name": "Dubuque County",
+      "state_fips": "19"
+    },
+    "DCA": {
+      "county_fips": "51013",
+      "county_name": "Arlington County",
+      "state_fips": "51"
+    },
+    "DDC": {
+      "county_fips": "20057",
+      "county_name": "Ford County",
+      "state_fips": "20"
+    },
+    "DEC": {
+      "county_fips": "17115",
+      "county_name": "Macon County",
+      "state_fips": "17"
+    },
+    "DEN": {
+      "county_fips": "08031",
+      "county_name": "Denver County",
+      "state_fips": "08"
+    },
+    "DFW": {
+      "county_fips": "48439",
+      "county_name": "Tarrant County",
+      "state_fips": "48"
+    },
+    "DHN": {
+      "county_fips": "01045",
+      "county_name": "Dale County",
+      "state_fips": "01"
+    },
+    "DIK": {
+      "county_fips": "38089",
+      "county_name": "Stark County",
+      "state_fips": "38"
+    },
+    "DJT": {
+      "county_fips": "12099",
+      "county_name": "Palm Beach County",
+      "state_fips": "12"
+    },
+    "DLG": {
+      "county_fips": "02070",
+      "county_name": "Dillingham Census Area",
+      "state_fips": "02"
+    },
+    "DLH": {
+      "county_fips": "27137",
+      "county_name": "St. Louis County",
+      "state_fips": "27"
+    },
+    "DRO": {
+      "county_fips": "08067",
+      "county_name": "La Plata County",
+      "state_fips": "08"
+    },
+    "DSM": {
+      "county_fips": "19153",
+      "county_name": "Polk County",
+      "state_fips": "19"
+    },
+    "DTW": {
+      "county_fips": "26163",
+      "county_name": "Wayne County",
+      "state_fips": "26"
+    },
+    "DUJ": {
+      "county_fips": "42065",
+      "county_name": "Jefferson County",
+      "state_fips": "42"
+    },
+    "DUT": {
+      "county_fips": "02016",
+      "county_name": "Aleutians West Census Area",
+      "state_fips": "02"
+    },
+    "DUY": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "DVL": {
+      "county_fips": "38071",
+      "county_name": "Ramsey County",
+      "state_fips": "38"
+    },
+    "EAR": {
+      "county_fips": "31019",
+      "county_name": "Buffalo County",
+      "state_fips": "31"
+    },
+    "EAT": {
+      "county_fips": "53017",
+      "county_name": "Douglas County",
+      "state_fips": "53"
+    },
+    "EAU": {
+      "county_fips": "55017",
+      "county_name": "Chippewa County",
+      "state_fips": "55"
+    },
+    "ECP": {
+      "county_fips": "12005",
+      "county_name": "Bay County",
+      "state_fips": "12"
+    },
+    "EEK": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "EGE": {
+      "county_fips": "08037",
+      "county_name": "Eagle County",
+      "state_fips": "08"
+    },
+    "EKO": {
+      "county_fips": "32007",
+      "county_name": "Elko County",
+      "state_fips": "32"
+    },
+    "ELM": {
+      "county_fips": "36015",
+      "county_name": "Chemung County",
+      "state_fips": "36"
+    },
+    "ELP": {
+      "county_fips": "48141",
+      "county_name": "El Paso County",
+      "state_fips": "48"
+    },
+    "ENA": {
+      "county_fips": "02122",
+      "county_name": "Kenai Peninsula Borough",
+      "state_fips": "02"
+    },
+    "ENM": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "ERI": {
+      "county_fips": "42049",
+      "county_name": "Erie County",
+      "state_fips": "42"
+    },
+    "ESC": {
+      "county_fips": "26041",
+      "county_name": "Delta County",
+      "state_fips": "26"
+    },
+    "EUG": {
+      "county_fips": "41039",
+      "county_name": "Lane County",
+      "state_fips": "41"
+    },
+    "EVV": {
+      "county_fips": "18163",
+      "county_name": "Vanderburgh County",
+      "state_fips": "18"
+    },
+    "EWB": {
+      "county_fips": "25005",
+      "county_name": "Bristol County",
+      "state_fips": "25"
+    },
+    "EWN": {
+      "county_fips": "37049",
+      "county_name": "Craven County",
+      "state_fips": "37"
+    },
+    "EWR": {
+      "county_fips": "34013",
+      "county_name": "Essex County",
+      "state_fips": "34"
+    },
+    "EYW": {
+      "county_fips": "12087",
+      "county_name": "Monroe County",
+      "state_fips": "12"
+    },
+    "FAI": {
+      "county_fips": "02090",
+      "county_name": "Fairbanks North Star Borough",
+      "state_fips": "02"
+    },
+    "FAR": {
+      "county_fips": "38017",
+      "county_name": "Cass County",
+      "state_fips": "38"
+    },
+    "FAT": {
+      "county_fips": "06019",
+      "county_name": "Fresno County",
+      "state_fips": "06"
+    },
+    "FAY": {
+      "county_fips": "37051",
+      "county_name": "Cumberland County",
+      "state_fips": "37"
+    },
+    "FHR": {
+      "county_fips": "53055",
+      "county_name": "San Juan County",
+      "state_fips": "53"
+    },
+    "FLG": {
+      "county_fips": "04005",
+      "county_name": "Coconino County",
+      "state_fips": "04"
+    },
+    "FLL": {
+      "county_fips": "12011",
+      "county_name": "Broward County",
+      "state_fips": "12"
+    },
+    "FLO": {
+      "county_fips": "45041",
+      "county_name": "Florence County",
+      "state_fips": "45"
+    },
+    "FMN": {
+      "county_fips": "35045",
+      "county_name": "San Juan County",
+      "state_fips": "35"
+    },
+    "FNT": {
+      "county_fips": "26049",
+      "county_name": "Genesee County",
+      "state_fips": "26"
+    },
+    "FOD": {
+      "county_fips": "19187",
+      "county_name": "Webster County",
+      "state_fips": "19"
+    },
+    "FSD": {
+      "county_fips": "46099",
+      "county_name": "Minnehaha County",
+      "state_fips": "46"
+    },
+    "FSM": {
+      "county_fips": "05131",
+      "county_name": "Sebastian County",
+      "state_fips": "05"
+    },
+    "FWA": {
+      "county_fips": "18003",
+      "county_name": "Allen County",
+      "state_fips": "18"
+    },
+    "FXE": {
+      "county_fips": "12011",
+      "county_name": "Broward County",
+      "state_fips": "12"
+    },
+    "FYU": {
+      "county_fips": "02290",
+      "county_name": "Yukon-Koyukuk Census Area",
+      "state_fips": "02"
+    },
+    "GAL": {
+      "county_fips": "02290",
+      "county_name": "Yukon-Koyukuk Census Area",
+      "state_fips": "02"
+    },
+    "GAM": {
+      "county_fips": "02180",
+      "county_name": "Nome Census Area",
+      "state_fips": "02"
+    },
+    "GCC": {
+      "county_fips": "56005",
+      "county_name": "Campbell County",
+      "state_fips": "56"
+    },
+    "GCK": {
+      "county_fips": "20055",
+      "county_name": "Finney County",
+      "state_fips": "20"
+    },
+    "GEG": {
+      "county_fips": "53063",
+      "county_name": "Spokane County",
+      "state_fips": "53"
+    },
+    "GFK": {
+      "county_fips": "38035",
+      "county_name": "Grand Forks County",
+      "state_fips": "38"
+    },
+    "GGG": {
+      "county_fips": "48183",
+      "county_name": "Gregg County",
+      "state_fips": "48"
+    },
+    "GGV": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "GGW": {
+      "county_fips": "30105",
+      "county_name": "Valley County",
+      "state_fips": "30"
+    },
+    "GJT": {
+      "county_fips": "08077",
+      "county_name": "Mesa County",
+      "state_fips": "08"
+    },
+    "GLH": {
+      "county_fips": "28151",
+      "county_name": "Washington County",
+      "state_fips": "28"
+    },
+    "GNV": {
+      "county_fips": "12001",
+      "county_name": "Alachua County",
+      "state_fips": "12"
+    },
+    "GPI": {
+      "county_fips": "30029",
+      "county_name": "Flathead County",
+      "state_fips": "30"
+    },
+    "GPT": {
+      "county_fips": "28047",
+      "county_name": "Harrison County",
+      "state_fips": "28"
+    },
+    "GRB": {
+      "county_fips": "55009",
+      "county_name": "Brown County",
+      "state_fips": "55"
+    },
+    "GRI": {
+      "county_fips": "31079",
+      "county_name": "Hall County",
+      "state_fips": "31"
+    },
+    "GRK": {
+      "county_fips": "48027",
+      "county_name": "Bell County",
+      "state_fips": "48"
+    },
+    "GRO": {
+      "county_fips": "69100",
+      "county_name": "Rota Municipality",
+      "state_fips": "69"
+    },
+    "GRR": {
+      "county_fips": "26081",
+      "county_name": "Kent County",
+      "state_fips": "26"
+    },
+    "GSN": {
+      "county_fips": "69110",
+      "county_name": "Saipan Municipality",
+      "state_fips": "69"
+    },
+    "GSO": {
+      "county_fips": "37081",
+      "county_name": "Guilford County",
+      "state_fips": "37"
+    },
+    "GSP": {
+      "county_fips": "45083",
+      "county_name": "Spartanburg County",
+      "state_fips": "45"
+    },
+    "GST": {
+      "county_fips": "02105",
+      "county_name": "Hoonah-Angoon Census Area",
+      "state_fips": "02"
+    },
+    "GTF": {
+      "county_fips": "30013",
+      "county_name": "Cascade County",
+      "state_fips": "30"
+    },
+    "GTR": {
+      "county_fips": "28087",
+      "county_name": "Lowndes County",
+      "state_fips": "28"
+    },
+    "GUC": {
+      "county_fips": "08051",
+      "county_name": "Gunnison County",
+      "state_fips": "08"
+    },
+    "GUM": {
+      "county_fips": "66010",
+      "county_name": "Guam",
+      "state_fips": "66"
+    },
+    "GUP": {
+      "county_fips": "35031",
+      "county_name": "McKinley County",
+      "state_fips": "35"
+    },
+    "HDN": {
+      "county_fips": "08107",
+      "county_name": "Routt County",
+      "state_fips": "08"
+    },
+    "HGR": {
+      "county_fips": "24043",
+      "county_name": "Washington County",
+      "state_fips": "24"
+    },
+    "HHR": {
+      "county_fips": "06037",
+      "county_name": "Los Angeles County",
+      "state_fips": "06"
+    },
+    "HIB": {
+      "county_fips": "27137",
+      "county_name": "St. Louis County",
+      "state_fips": "27"
+    },
+    "HLA": {
+      "county_fips": "02290",
+      "county_name": "Yukon-Koyukuk Census Area",
+      "state_fips": "02"
+    },
+    "HLN": {
+      "county_fips": "30049",
+      "county_name": "Lewis and Clark County",
+      "state_fips": "30"
+    },
+    "HNH": {
+      "county_fips": "02105",
+      "county_name": "Hoonah-Angoon Census Area",
+      "state_fips": "02"
+    },
+    "HNL": {
+      "county_fips": "15003",
+      "county_name": "Honolulu County",
+      "state_fips": "15"
+    },
+    "HNS": {
+      "county_fips": "02100",
+      "county_name": "Haines Borough",
+      "state_fips": "02"
+    },
+    "HOB": {
+      "county_fips": "35025",
+      "county_name": "Lea County",
+      "state_fips": "35"
+    },
+    "HOM": {
+      "county_fips": "02122",
+      "county_name": "Kenai Peninsula Borough",
+      "state_fips": "02"
+    },
+    "HOT": {
+      "county_fips": "05051",
+      "county_name": "Garland County",
+      "state_fips": "05"
+    },
+    "HOU": {
+      "county_fips": "48201",
+      "county_name": "Harris County",
+      "state_fips": "48"
+    },
+    "HPB": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "HPN": {
+      "county_fips": "36119",
+      "county_name": "Westchester County",
+      "state_fips": "36"
+    },
+    "HRL": {
+      "county_fips": "48061",
+      "county_name": "Cameron County",
+      "state_fips": "48"
+    },
+    "HRO": {
+      "county_fips": "05009",
+      "county_name": "Boone County",
+      "state_fips": "05"
+    },
+    "HSV": {
+      "county_fips": "01089",
+      "county_name": "Madison County",
+      "state_fips": "01"
+    },
+    "HTS": {
+      "county_fips": "54099",
+      "county_name": "Wayne County",
+      "state_fips": "54"
+    },
+    "HVN": {
+      "county_fips": "09170",
+      "county_name": "South Central Connecticut Planning Region",
+      "state_fips": "09"
+    },
+    "HVR": {
+      "county_fips": "30041",
+      "county_name": "Hill County",
+      "state_fips": "30"
+    },
+    "HXD": {
+      "county_fips": "45013",
+      "county_name": "Beaufort County",
+      "state_fips": "45"
+    },
+    "HYA": {
+      "county_fips": "25001",
+      "county_name": "Barnstable County",
+      "state_fips": "25"
+    },
+    "HYS": {
+      "county_fips": "20051",
+      "county_name": "Ellis County",
+      "state_fips": "20"
+    },
+    "IAD": {
+      "county_fips": "51107",
+      "county_name": "Loudoun County",
+      "state_fips": "51"
+    },
+    "IAG": {
+      "county_fips": "36063",
+      "county_name": "Niagara County",
+      "state_fips": "36"
+    },
+    "IAH": {
+      "county_fips": "48201",
+      "county_name": "Harris County",
+      "state_fips": "48"
+    },
+    "IAN": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "ICT": {
+      "county_fips": "20173",
+      "county_name": "Sedgwick County",
+      "state_fips": "20"
+    },
+    "IDA": {
+      "county_fips": "16019",
+      "county_name": "Bonneville County",
+      "state_fips": "16"
+    },
+    "IFP": {
+      "county_fips": "04015",
+      "county_name": "Mohave County",
+      "state_fips": "04"
+    },
+    "IIK": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "ILG": {
+      "county_fips": "10003",
+      "county_name": "New Castle County",
+      "state_fips": "10"
+    },
+    "ILI": {
+      "county_fips": "02164",
+      "county_name": "Lake and Peninsula Borough",
+      "state_fips": "02"
+    },
+    "ILM": {
+      "county_fips": "37129",
+      "county_name": "New Hanover County",
+      "state_fips": "37"
+    },
+    "IMT": {
+      "county_fips": "26043",
+      "county_name": "Dickinson County",
+      "state_fips": "26"
+    },
+    "IND": {
+      "county_fips": "18097",
+      "county_name": "Marion County",
+      "state_fips": "18"
+    },
+    "INL": {
+      "county_fips": "27071",
+      "county_name": "Koochiching County",
+      "state_fips": "27"
+    },
+    "IPL": {
+      "county_fips": "06025",
+      "county_name": "Imperial County",
+      "state_fips": "06"
+    },
+    "IRK": {
+      "county_fips": "29001",
+      "county_name": "Adair County",
+      "state_fips": "29"
+    },
+    "ISP": {
+      "county_fips": "36103",
+      "county_name": "Suffolk County",
+      "state_fips": "36"
+    },
+    "ITH": {
+      "county_fips": "36109",
+      "county_name": "Tompkins County",
+      "state_fips": "36"
+    },
+    "ITO": {
+      "county_fips": "15001",
+      "county_name": "Hawaii County",
+      "state_fips": "15"
+    },
+    "IWA": {
+      "county_fips": "04013",
+      "county_name": "Maricopa County",
+      "state_fips": "04"
+    },
+    "IWD": {
+      "county_fips": "26053",
+      "county_name": "Gogebic County",
+      "state_fips": "26"
+    },
+    "JAC": {
+      "county_fips": "56039",
+      "county_name": "Teton County",
+      "state_fips": "56"
+    },
+    "JAN": {
+      "county_fips": "28121",
+      "county_name": "Rankin County",
+      "state_fips": "28"
+    },
+    "JAX": {
+      "county_fips": "12031",
+      "county_name": "Duval County",
+      "state_fips": "12"
+    },
+    "JFK": {
+      "county_fips": "36081",
+      "county_name": "Queens County",
+      "state_fips": "36"
+    },
+    "JKA": {
+      "county_fips": "01003",
+      "county_name": "Baldwin County",
+      "state_fips": "01"
+    },
+    "JLN": {
+      "county_fips": "29097",
+      "county_name": "Jasper County",
+      "state_fips": "29"
+    },
+    "JMS": {
+      "county_fips": "38093",
+      "county_name": "Stutsman County",
+      "state_fips": "38"
+    },
+    "JNU": {
+      "county_fips": "02110",
+      "county_name": "Juneau City and Borough",
+      "state_fips": "02"
+    },
+    "JQF": {
+      "county_fips": "37025",
+      "county_name": "Cabarrus County",
+      "state_fips": "37"
+    },
+    "JST": {
+      "county_fips": "42021",
+      "county_name": "Cambria County",
+      "state_fips": "42"
+    },
+    "KLG": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "KOA": {
+      "county_fips": "15001",
+      "county_name": "Hawaii County",
+      "state_fips": "15"
+    },
+    "KSM": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "KTN": {
+      "county_fips": "02130",
+      "county_name": "Ketchikan Gateway Borough",
+      "state_fips": "02"
+    },
+    "KVL": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "KWT": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "LAF": {
+      "county_fips": "18157",
+      "county_name": "Tippecanoe County",
+      "state_fips": "18"
+    },
+    "LAL": {
+      "county_fips": "12105",
+      "county_name": "Polk County",
+      "state_fips": "12"
+    },
+    "LAN": {
+      "county_fips": "26037",
+      "county_name": "Clinton County",
+      "state_fips": "26"
+    },
+    "LAR": {
+      "county_fips": "56001",
+      "county_name": "Albany County",
+      "state_fips": "56"
+    },
+    "LAS": {
+      "county_fips": "32003",
+      "county_name": "Clark County",
+      "state_fips": "32"
+    },
+    "LAW": {
+      "county_fips": "40031",
+      "county_name": "Comanche County",
+      "state_fips": "40"
+    },
+    "LAX": {
+      "county_fips": "06037",
+      "county_name": "Los Angeles County",
+      "state_fips": "06"
+    },
+    "LBB": {
+      "county_fips": "48303",
+      "county_name": "Lubbock County",
+      "state_fips": "48"
+    },
+    "LBE": {
+      "county_fips": "42129",
+      "county_name": "Westmoreland County",
+      "state_fips": "42"
+    },
+    "LBF": {
+      "county_fips": "31111",
+      "county_name": "Lincoln County",
+      "state_fips": "31"
+    },
+    "LBL": {
+      "county_fips": "20175",
+      "county_name": "Seward County",
+      "state_fips": "20"
+    },
+    "LCH": {
+      "county_fips": "22019",
+      "county_name": "Calcasieu Parish",
+      "state_fips": "22"
+    },
+    "LCK": {
+      "county_fips": "39049",
+      "county_name": "Franklin County",
+      "state_fips": "39"
+    },
+    "LEB": {
+      "county_fips": "33009",
+      "county_name": "Grafton County",
+      "state_fips": "33"
+    },
+    "LEX": {
+      "county_fips": "21067",
+      "county_name": "Fayette County",
+      "state_fips": "21"
+    },
+    "LFT": {
+      "county_fips": "22055",
+      "county_name": "Lafayette Parish",
+      "state_fips": "22"
+    },
+    "LGA": {
+      "county_fips": "36081",
+      "county_name": "Queens County",
+      "state_fips": "36"
+    },
+    "LGB": {
+      "county_fips": "06037",
+      "county_name": "Los Angeles County",
+      "state_fips": "06"
+    },
+    "LIH": {
+      "county_fips": "15007",
+      "county_name": "Kauai County",
+      "state_fips": "15"
+    },
+    "LIT": {
+      "county_fips": "05119",
+      "county_name": "Pulaski County",
+      "state_fips": "05"
+    },
+    "LNK": {
+      "county_fips": "31109",
+      "county_name": "Lancaster County",
+      "state_fips": "31"
+    },
+    "LNS": {
+      "county_fips": "42071",
+      "county_name": "Lancaster County",
+      "state_fips": "42"
+    },
+    "LNY": {
+      "county_fips": "15009",
+      "county_name": "Maui County",
+      "state_fips": "15"
+    },
+    "LRD": {
+      "county_fips": "48479",
+      "county_name": "Webb County",
+      "state_fips": "48"
+    },
+    "LSE": {
+      "county_fips": "55063",
+      "county_name": "La Crosse County",
+      "state_fips": "55"
+    },
+    "LUP": {
+      "county_fips": "15005",
+      "county_name": "Kalawao County",
+      "state_fips": "15"
+    },
+    "LWB": {
+      "county_fips": "54025",
+      "county_name": "Greenbrier County",
+      "state_fips": "54"
+    },
+    "LWS": {
+      "county_fips": "16069",
+      "county_name": "Nez Perce County",
+      "state_fips": "16"
+    },
+    "LYH": {
+      "county_fips": "51031",
+      "county_name": "Campbell County",
+      "state_fips": "51"
+    },
+    "MAF": {
+      "county_fips": "48329",
+      "county_name": "Midland County",
+      "state_fips": "48"
+    },
+    "MAZ": {
+      "county_fips": "72097",
+      "county_name": "Mayag\u00fcez Municipio",
+      "state_fips": "72"
+    },
+    "MBL": {
+      "county_fips": "26101",
+      "county_name": "Manistee County",
+      "state_fips": "26"
+    },
+    "MBS": {
+      "county_fips": "26145",
+      "county_name": "Saginaw County",
+      "state_fips": "26"
+    },
+    "MCE": {
+      "county_fips": "06047",
+      "county_name": "Merced County",
+      "state_fips": "06"
+    },
+    "MCG": {
+      "county_fips": "02290",
+      "county_name": "Yukon-Koyukuk Census Area",
+      "state_fips": "02"
+    },
+    "MCI": {
+      "county_fips": "29165",
+      "county_name": "Platte County",
+      "state_fips": "29"
+    },
+    "MCN": {
+      "county_fips": "13021",
+      "county_name": "Bibb County",
+      "state_fips": "13"
+    },
+    "MCO": {
+      "county_fips": "12095",
+      "county_name": "Orange County",
+      "state_fips": "12"
+    },
+    "MCW": {
+      "county_fips": "19033",
+      "county_name": "Cerro Gordo County",
+      "state_fips": "19"
+    },
+    "MDM": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "MDT": {
+      "county_fips": "42043",
+      "county_name": "Dauphin County",
+      "state_fips": "42"
+    },
+    "MDW": {
+      "county_fips": "17031",
+      "county_name": "Cook County",
+      "state_fips": "17"
+    },
+    "MEI": {
+      "county_fips": "28075",
+      "county_name": "Lauderdale County",
+      "state_fips": "28"
+    },
+    "MEM": {
+      "county_fips": "47157",
+      "county_name": "Shelby County",
+      "state_fips": "47"
+    },
+    "MFE": {
+      "county_fips": "48215",
+      "county_name": "Hidalgo County",
+      "state_fips": "48"
+    },
+    "MFR": {
+      "county_fips": "41029",
+      "county_name": "Jackson County",
+      "state_fips": "41"
+    },
+    "MGM": {
+      "county_fips": "01101",
+      "county_name": "Montgomery County",
+      "state_fips": "01"
+    },
+    "MGW": {
+      "county_fips": "54061",
+      "county_name": "Monongalia County",
+      "state_fips": "54"
+    },
+    "MHK": {
+      "county_fips": "20161",
+      "county_name": "Riley County",
+      "state_fips": "20"
+    },
+    "MHT": {
+      "county_fips": "33015",
+      "county_name": "Rockingham County",
+      "state_fips": "33"
+    },
+    "MIA": {
+      "county_fips": "12086",
+      "county_name": "Miami-Dade County",
+      "state_fips": "12"
+    },
+    "MKE": {
+      "county_fips": "55079",
+      "county_name": "Milwaukee County",
+      "state_fips": "55"
+    },
+    "MKG": {
+      "county_fips": "26121",
+      "county_name": "Muskegon County",
+      "state_fips": "26"
+    },
+    "MKK": {
+      "county_fips": "15009",
+      "county_name": "Maui County",
+      "state_fips": "15"
+    },
+    "MKL": {
+      "county_fips": "47113",
+      "county_name": "Madison County",
+      "state_fips": "47"
+    },
+    "MLB": {
+      "county_fips": "12009",
+      "county_name": "Brevard County",
+      "state_fips": "12"
+    },
+    "MLI": {
+      "county_fips": "17161",
+      "county_name": "Rock Island County",
+      "state_fips": "17"
+    },
+    "MLU": {
+      "county_fips": "22073",
+      "county_name": "Ouachita Parish",
+      "state_fips": "22"
+    },
+    "MMH": {
+      "county_fips": "06051",
+      "county_name": "Mono County",
+      "state_fips": "06"
+    },
+    "MOB": {
+      "county_fips": "01097",
+      "county_name": "Mobile County",
+      "state_fips": "01"
+    },
+    "MOT": {
+      "county_fips": "38101",
+      "county_name": "Ward County",
+      "state_fips": "38"
+    },
+    "MOU": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "MRI": {
+      "county_fips": "02020",
+      "county_name": "Anchorage Municipality",
+      "state_fips": "02"
+    },
+    "MRY": {
+      "county_fips": "06053",
+      "county_name": "Monterey County",
+      "state_fips": "06"
+    },
+    "MSL": {
+      "county_fips": "01033",
+      "county_name": "Colbert County",
+      "state_fips": "01"
+    },
+    "MSN": {
+      "county_fips": "55025",
+      "county_name": "Dane County",
+      "state_fips": "55"
+    },
+    "MSO": {
+      "county_fips": "30063",
+      "county_name": "Missoula County",
+      "state_fips": "30"
+    },
+    "MSP": {
+      "county_fips": "27053",
+      "county_name": "Hennepin County",
+      "state_fips": "27"
+    },
+    "MSS": {
+      "county_fips": "36089",
+      "county_name": "St. Lawrence County",
+      "state_fips": "36"
+    },
+    "MSY": {
+      "county_fips": "22051",
+      "county_name": "Jefferson Parish",
+      "state_fips": "22"
+    },
+    "MTJ": {
+      "county_fips": "08085",
+      "county_name": "Montrose County",
+      "state_fips": "08"
+    },
+    "MUE": {
+      "county_fips": "15001",
+      "county_name": "Hawaii County",
+      "state_fips": "15"
+    },
+    "MVY": {
+      "county_fips": "25007",
+      "county_name": "Dukes County",
+      "state_fips": "25"
+    },
+    "MWA": {
+      "county_fips": "17199",
+      "county_name": "Williamson County",
+      "state_fips": "17"
+    },
+    "MYR": {
+      "county_fips": "45051",
+      "county_name": "Horry County",
+      "state_fips": "45"
+    },
+    "NUL": {
+      "county_fips": "02290",
+      "county_name": "Yukon-Koyukuk Census Area",
+      "state_fips": "02"
+    },
+    "NYL": {
+      "county_fips": "04027",
+      "county_name": "Yuma County",
+      "state_fips": "04"
+    },
+    "OAJ": {
+      "county_fips": "37133",
+      "county_name": "Onslow County",
+      "state_fips": "37"
+    },
+    "OAK": {
+      "county_fips": "06001",
+      "county_name": "Alameda County",
+      "state_fips": "06"
+    },
+    "OGD": {
+      "county_fips": "49057",
+      "county_name": "Weber County",
+      "state_fips": "49"
+    },
+    "OGG": {
+      "county_fips": "15009",
+      "county_name": "Maui County",
+      "state_fips": "15"
+    },
+    "OGS": {
+      "county_fips": "36089",
+      "county_name": "St. Lawrence County",
+      "state_fips": "36"
+    },
+    "OKC": {
+      "county_fips": "40109",
+      "county_name": "Oklahoma County",
+      "state_fips": "40"
+    },
+    "OLF": {
+      "county_fips": "30085",
+      "county_name": "Roosevelt County",
+      "state_fips": "30"
+    },
+    "OMA": {
+      "county_fips": "31055",
+      "county_name": "Douglas County",
+      "state_fips": "31"
+    },
+    "OME": {
+      "county_fips": "02180",
+      "county_name": "Nome Census Area",
+      "state_fips": "02"
+    },
+    "ONT": {
+      "county_fips": "06071",
+      "county_name": "San Bernardino County",
+      "state_fips": "06"
+    },
+    "OOK": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "ORD": {
+      "county_fips": "17031",
+      "county_name": "Cook County",
+      "state_fips": "17"
+    },
+    "ORF": {
+      "county_fips": "51710",
+      "county_name": "Norfolk city",
+      "state_fips": "51"
+    },
+    "ORH": {
+      "county_fips": "25027",
+      "county_name": "Worcester County",
+      "state_fips": "25"
+    },
+    "ORS": {
+      "county_fips": "53055",
+      "county_name": "San Juan County",
+      "state_fips": "53"
+    },
+    "OTH": {
+      "county_fips": "41011",
+      "county_name": "Coos County",
+      "state_fips": "41"
+    },
+    "OTZ": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "OWB": {
+      "county_fips": "21059",
+      "county_name": "Daviess County",
+      "state_fips": "21"
+    },
+    "PAE": {
+      "county_fips": "53061",
+      "county_name": "Snohomish County",
+      "state_fips": "53"
+    },
+    "PAH": {
+      "county_fips": "21145",
+      "county_name": "McCracken County",
+      "state_fips": "21"
+    },
+    "PBG": {
+      "county_fips": "36019",
+      "county_name": "Clinton County",
+      "state_fips": "36"
+    },
+    "PDT": {
+      "county_fips": "41059",
+      "county_name": "Umatilla County",
+      "state_fips": "41"
+    },
+    "PDX": {
+      "county_fips": "41051",
+      "county_name": "Multnomah County",
+      "state_fips": "41"
+    },
+    "PGA": {
+      "county_fips": "04005",
+      "county_name": "Coconino County",
+      "state_fips": "04"
+    },
+    "PGD": {
+      "county_fips": "12015",
+      "county_name": "Charlotte County",
+      "state_fips": "12"
+    },
+    "PGV": {
+      "county_fips": "37147",
+      "county_name": "Pitt County",
+      "state_fips": "37"
+    },
+    "PHF": {
+      "county_fips": "51700",
+      "county_name": "Newport News city",
+      "state_fips": "51"
+    },
+    "PHL": {
+      "county_fips": "42045",
+      "county_name": "Delaware County",
+      "state_fips": "42"
+    },
+    "PHO": {
+      "county_fips": "02185",
+      "county_name": "North Slope Borough",
+      "state_fips": "02"
+    },
+    "PHX": {
+      "county_fips": "04013",
+      "county_name": "Maricopa County",
+      "state_fips": "04"
+    },
+    "PIA": {
+      "county_fips": "17143",
+      "county_name": "Peoria County",
+      "state_fips": "17"
+    },
+    "PIB": {
+      "county_fips": "28067",
+      "county_name": "Jones County",
+      "state_fips": "28"
+    },
+    "PIE": {
+      "county_fips": "12103",
+      "county_name": "Pinellas County",
+      "state_fips": "12"
+    },
+    "PIH": {
+      "county_fips": "16077",
+      "county_name": "Power County",
+      "state_fips": "16"
+    },
+    "PIR": {
+      "county_fips": "46065",
+      "county_name": "Hughes County",
+      "state_fips": "46"
+    },
+    "PIT": {
+      "county_fips": "42003",
+      "county_name": "Allegheny County",
+      "state_fips": "42"
+    },
+    "PKB": {
+      "county_fips": "54107",
+      "county_name": "Wood County",
+      "state_fips": "54"
+    },
+    "PLN": {
+      "county_fips": "26047",
+      "county_name": "Emmet County",
+      "state_fips": "26"
+    },
+    "PNS": {
+      "county_fips": "12033",
+      "county_name": "Escambia County",
+      "state_fips": "12"
+    },
+    "PPG": {
+      "county_fips": "60050",
+      "county_name": "Western District",
+      "state_fips": "60"
+    },
+    "PQI": {
+      "county_fips": "23003",
+      "county_name": "Aroostook County",
+      "state_fips": "23"
+    },
+    "PRC": {
+      "county_fips": "04025",
+      "county_name": "Yavapai County",
+      "state_fips": "04"
+    },
+    "PSC": {
+      "county_fips": "53021",
+      "county_name": "Franklin County",
+      "state_fips": "53"
+    },
+    "PSE": {
+      "county_fips": "72113",
+      "county_name": "Ponce Municipio",
+      "state_fips": "72"
+    },
+    "PSG": {
+      "county_fips": "02195",
+      "county_name": "Petersburg Borough",
+      "state_fips": "02"
+    },
+    "PSM": {
+      "county_fips": "33015",
+      "county_name": "Rockingham County",
+      "state_fips": "33"
+    },
+    "PSP": {
+      "county_fips": "06065",
+      "county_name": "Riverside County",
+      "state_fips": "06"
+    },
+    "PUB": {
+      "county_fips": "08101",
+      "county_name": "Pueblo County",
+      "state_fips": "08"
+    },
+    "PUW": {
+      "county_fips": "53075",
+      "county_name": "Whitman County",
+      "state_fips": "53"
+    },
+    "PVC": {
+      "county_fips": "25001",
+      "county_name": "Barnstable County",
+      "state_fips": "25"
+    },
+    "PVD": {
+      "county_fips": "44003",
+      "county_name": "Kent County",
+      "state_fips": "44"
+    },
+    "PVU": {
+      "county_fips": "49049",
+      "county_name": "Utah County",
+      "state_fips": "49"
+    },
+    "PWM": {
+      "county_fips": "23005",
+      "county_name": "Cumberland County",
+      "state_fips": "23"
+    },
+    "RAP": {
+      "county_fips": "46103",
+      "county_name": "Pennington County",
+      "state_fips": "46"
+    },
+    "RDD": {
+      "county_fips": "06089",
+      "county_name": "Shasta County",
+      "state_fips": "06"
+    },
+    "RDM": {
+      "county_fips": "41017",
+      "county_name": "Deschutes County",
+      "state_fips": "41"
+    },
+    "RDU": {
+      "county_fips": "37183",
+      "county_name": "Wake County",
+      "state_fips": "37"
+    },
+    "RFD": {
+      "county_fips": "17201",
+      "county_name": "Winnebago County",
+      "state_fips": "17"
+    },
+    "RHI": {
+      "county_fips": "55085",
+      "county_name": "Oneida County",
+      "state_fips": "55"
+    },
+    "RIC": {
+      "county_fips": "51087",
+      "county_name": "Henrico County",
+      "state_fips": "51"
+    },
+    "RIW": {
+      "county_fips": "56013",
+      "county_name": "Fremont County",
+      "state_fips": "56"
+    },
+    "RKD": {
+      "county_fips": "23013",
+      "county_name": "Knox County",
+      "state_fips": "23"
+    },
+    "RKS": {
+      "county_fips": "56037",
+      "county_name": "Sweetwater County",
+      "state_fips": "56"
+    },
+    "RNO": {
+      "county_fips": "32031",
+      "county_name": "Washoe County",
+      "state_fips": "32"
+    },
+    "ROA": {
+      "county_fips": "51770",
+      "county_name": "Roanoke city",
+      "state_fips": "51"
+    },
+    "ROC": {
+      "county_fips": "36055",
+      "county_name": "Monroe County",
+      "state_fips": "36"
+    },
+    "ROW": {
+      "county_fips": "35005",
+      "county_name": "Chaves County",
+      "state_fips": "35"
+    },
+    "RSH": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "RST": {
+      "county_fips": "27109",
+      "county_name": "Olmsted County",
+      "state_fips": "27"
+    },
+    "RSW": {
+      "county_fips": "12071",
+      "county_name": "Lee County",
+      "state_fips": "12"
+    },
+    "RUT": {
+      "county_fips": "50021",
+      "county_name": "Rutland County",
+      "state_fips": "50"
+    },
+    "RVR": {
+      "county_fips": "49015",
+      "county_name": "Emery County",
+      "state_fips": "49"
+    },
+    "SAF": {
+      "county_fips": "35049",
+      "county_name": "Santa Fe County",
+      "state_fips": "35"
+    },
+    "SAN": {
+      "county_fips": "06073",
+      "county_name": "San Diego County",
+      "state_fips": "06"
+    },
+    "SAT": {
+      "county_fips": "48029",
+      "county_name": "Bexar County",
+      "state_fips": "48"
+    },
+    "SAV": {
+      "county_fips": "13051",
+      "county_name": "Chatham County",
+      "state_fips": "13"
+    },
+    "SAW": {
+      "county_fips": "26103",
+      "county_name": "Marquette County",
+      "state_fips": "26"
+    },
+    "SBA": {
+      "county_fips": "06083",
+      "county_name": "Santa Barbara County",
+      "state_fips": "06"
+    },
+    "SBD": {
+      "county_fips": "06071",
+      "county_name": "San Bernardino County",
+      "state_fips": "06"
+    },
+    "SBN": {
+      "county_fips": "18141",
+      "county_name": "St. Joseph County",
+      "state_fips": "18"
+    },
+    "SBP": {
+      "county_fips": "06079",
+      "county_name": "San Luis Obispo County",
+      "state_fips": "06"
+    },
+    "SBY": {
+      "county_fips": "24045",
+      "county_name": "Wicomico County",
+      "state_fips": "24"
+    },
+    "SCC": {
+      "county_fips": "02185",
+      "county_name": "North Slope Borough",
+      "state_fips": "02"
+    },
+    "SCK": {
+      "county_fips": "06077",
+      "county_name": "San Joaquin County",
+      "state_fips": "06"
+    },
+    "SCM": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "SDF": {
+      "county_fips": "21111",
+      "county_name": "Jefferson County",
+      "state_fips": "21"
+    },
+    "SDY": {
+      "county_fips": "30083",
+      "county_name": "Richland County",
+      "state_fips": "30"
+    },
+    "SEA": {
+      "county_fips": "53033",
+      "county_name": "King County",
+      "state_fips": "53"
+    },
+    "SFB": {
+      "county_fips": "12117",
+      "county_name": "Seminole County",
+      "state_fips": "12"
+    },
+    "SFO": {
+      "county_fips": "06081",
+      "county_name": "San Mateo County",
+      "state_fips": "06"
+    },
+    "SGF": {
+      "county_fips": "29077",
+      "county_name": "Greene County",
+      "state_fips": "29"
+    },
+    "SGU": {
+      "county_fips": "49053",
+      "county_name": "Washington County",
+      "state_fips": "49"
+    },
+    "SGY": {
+      "county_fips": "02230",
+      "county_name": "Skagway Municipality",
+      "state_fips": "02"
+    },
+    "SHD": {
+      "county_fips": "51015",
+      "county_name": "Augusta County",
+      "state_fips": "51"
+    },
+    "SHH": {
+      "county_fips": "02180",
+      "county_name": "Nome Census Area",
+      "state_fips": "02"
+    },
+    "SHR": {
+      "county_fips": "56033",
+      "county_name": "Sheridan County",
+      "state_fips": "56"
+    },
+    "SHV": {
+      "county_fips": "22017",
+      "county_name": "Caddo Parish",
+      "state_fips": "22"
+    },
+    "SIG": {
+      "county_fips": "72127",
+      "county_name": "San Juan Municipio",
+      "state_fips": "72"
+    },
+    "SIT": {
+      "county_fips": "02220",
+      "county_name": "Sitka City and Borough",
+      "state_fips": "02"
+    },
+    "SJC": {
+      "county_fips": "06085",
+      "county_name": "Santa Clara County",
+      "state_fips": "06"
+    },
+    "SJT": {
+      "county_fips": "48451",
+      "county_name": "Tom Green County",
+      "state_fips": "48"
+    },
+    "SJU": {
+      "county_fips": "72031",
+      "county_name": "Carolina Municipio",
+      "state_fips": "72"
+    },
+    "SKX": {
+      "county_fips": "35055",
+      "county_name": "Taos County",
+      "state_fips": "35"
+    },
+    "SLC": {
+      "county_fips": "49035",
+      "county_name": "Salt Lake County",
+      "state_fips": "49"
+    },
+    "SLE": {
+      "county_fips": "41047",
+      "county_name": "Marion County",
+      "state_fips": "41"
+    },
+    "SLK": {
+      "county_fips": "36033",
+      "county_name": "Franklin County",
+      "state_fips": "36"
+    },
+    "SLN": {
+      "county_fips": "20169",
+      "county_name": "Saline County",
+      "state_fips": "20"
+    },
+    "SMF": {
+      "county_fips": "06067",
+      "county_name": "Sacramento County",
+      "state_fips": "06"
+    },
+    "SMX": {
+      "county_fips": "06083",
+      "county_name": "Santa Barbara County",
+      "state_fips": "06"
+    },
+    "SNA": {
+      "county_fips": "06059",
+      "county_name": "Orange County",
+      "state_fips": "06"
+    },
+    "SOV": {
+      "county_fips": "02122",
+      "county_name": "Kenai Peninsula Borough",
+      "state_fips": "02"
+    },
+    "SOW": {
+      "county_fips": "04017",
+      "county_name": "Navajo County",
+      "state_fips": "04"
+    },
+    "SPI": {
+      "county_fips": "17167",
+      "county_name": "Sangamon County",
+      "state_fips": "17"
+    },
+    "SPS": {
+      "county_fips": "48485",
+      "county_name": "Wichita County",
+      "state_fips": "48"
+    },
+    "SRQ": {
+      "county_fips": "12081",
+      "county_name": "Manatee County",
+      "state_fips": "12"
+    },
+    "STC": {
+      "county_fips": "27141",
+      "county_name": "Sherburne County",
+      "state_fips": "27"
+    },
+    "STL": {
+      "county_fips": "29189",
+      "county_name": "St. Louis County",
+      "state_fips": "29"
+    },
+    "STS": {
+      "county_fips": "06097",
+      "county_name": "Sonoma County",
+      "state_fips": "06"
+    },
+    "STT": {
+      "county_fips": "78030",
+      "county_name": "St. Thomas Island",
+      "state_fips": "78"
+    },
+    "STX": {
+      "county_fips": "78010",
+      "county_name": "St. Croix Island",
+      "state_fips": "78"
+    },
+    "SUA": {
+      "county_fips": "12085",
+      "county_name": "Martin County",
+      "state_fips": "12"
+    },
+    "SUN": {
+      "county_fips": "16013",
+      "county_name": "Blaine County",
+      "state_fips": "16"
+    },
+    "SUX": {
+      "county_fips": "19193",
+      "county_name": "Woodbury County",
+      "state_fips": "19"
+    },
+    "SVA": {
+      "county_fips": "02180",
+      "county_name": "Nome Census Area",
+      "state_fips": "02"
+    },
+    "SVC": {
+      "county_fips": "35017",
+      "county_name": "Grant County",
+      "state_fips": "35"
+    },
+    "SWF": {
+      "county_fips": "36071",
+      "county_name": "Orange County",
+      "state_fips": "36"
+    },
+    "SWO": {
+      "county_fips": "40119",
+      "county_name": "Payne County",
+      "state_fips": "40"
+    },
+    "SYR": {
+      "county_fips": "36067",
+      "county_name": "Onondaga County",
+      "state_fips": "36"
+    },
+    "TBN": {
+      "county_fips": "29169",
+      "county_name": "Pulaski County",
+      "state_fips": "29"
+    },
+    "TEX": {
+      "county_fips": "08113",
+      "county_name": "San Miguel County",
+      "state_fips": "08"
+    },
+    "TLH": {
+      "county_fips": "12073",
+      "county_name": "Leon County",
+      "state_fips": "12"
+    },
+    "TLT": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "TNI": {
+      "county_fips": "69120",
+      "county_name": "Tinian Municipality",
+      "state_fips": "69"
+    },
+    "TOG": {
+      "county_fips": "02070",
+      "county_name": "Dillingham Census Area",
+      "state_fips": "02"
+    },
+    "TOL": {
+      "county_fips": "39095",
+      "county_name": "Lucas County",
+      "state_fips": "39"
+    },
+    "TPA": {
+      "county_fips": "12057",
+      "county_name": "Hillsborough County",
+      "state_fips": "12"
+    },
+    "TRI": {
+      "county_fips": "47163",
+      "county_name": "Sullivan County",
+      "state_fips": "47"
+    },
+    "TTN": {
+      "county_fips": "34021",
+      "county_name": "Mercer County",
+      "state_fips": "34"
+    },
+    "TUL": {
+      "county_fips": "40143",
+      "county_name": "Tulsa County",
+      "state_fips": "40"
+    },
+    "TUP": {
+      "county_fips": "28081",
+      "county_name": "Lee County",
+      "state_fips": "28"
+    },
+    "TUS": {
+      "county_fips": "04019",
+      "county_name": "Pima County",
+      "state_fips": "04"
+    },
+    "TVC": {
+      "county_fips": "26055",
+      "county_name": "Grand Traverse County",
+      "state_fips": "26"
+    },
+    "TVF": {
+      "county_fips": "27113",
+      "county_name": "Pennington County",
+      "state_fips": "27"
+    },
+    "TWF": {
+      "county_fips": "16083",
+      "county_name": "Twin Falls County",
+      "state_fips": "16"
+    },
+    "TXK": {
+      "county_fips": "05091",
+      "county_name": "Miller County",
+      "state_fips": "05"
+    },
+    "TYR": {
+      "county_fips": "48423",
+      "county_name": "Smith County",
+      "state_fips": "48"
+    },
+    "TYS": {
+      "county_fips": "47009",
+      "county_name": "Blount County",
+      "state_fips": "47"
+    },
+    "UIN": {
+      "county_fips": "17001",
+      "county_name": "Adams County",
+      "state_fips": "17"
+    },
+    "UNK": {
+      "county_fips": "02180",
+      "county_name": "Nome Census Area",
+      "state_fips": "02"
+    },
+    "UNV": {
+      "county_fips": "42027",
+      "county_name": "Centre County",
+      "state_fips": "42"
+    },
+    "VAK": {
+      "county_fips": "02158",
+      "county_name": "Kusilvak Census Area",
+      "state_fips": "02"
+    },
+    "VCT": {
+      "county_fips": "48469",
+      "county_name": "Victoria County",
+      "state_fips": "48"
+    },
+    "VDZ": {
+      "county_fips": "02063",
+      "county_name": "Chugach Census Area",
+      "state_fips": "02"
+    },
+    "VEL": {
+      "county_fips": "49047",
+      "county_name": "Uintah County",
+      "state_fips": "49"
+    },
+    "VLD": {
+      "county_fips": "13185",
+      "county_name": "Lowndes County",
+      "state_fips": "13"
+    },
+    "VPS": {
+      "county_fips": "12091",
+      "county_name": "Okaloosa County",
+      "state_fips": "12"
+    },
+    "VQS": {
+      "county_fips": "72147",
+      "county_name": "Vieques Municipio",
+      "state_fips": "72"
+    },
+    "VRB": {
+      "county_fips": "12061",
+      "county_name": "Indian River County",
+      "state_fips": "12"
+    },
+    "W33": {
+      "county_fips": "53055",
+      "county_name": "San Juan County",
+      "state_fips": "53"
+    },
+    "WLK": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "WRG": {
+      "county_fips": "02275",
+      "county_name": "Wrangell City and Borough",
+      "state_fips": "02"
+    },
+    "WST": {
+      "county_fips": "44009",
+      "county_name": "Washington County",
+      "state_fips": "44"
+    },
+    "WTK": {
+      "county_fips": "02188",
+      "county_name": "Northwest Arctic Borough",
+      "state_fips": "02"
+    },
+    "WYS": {
+      "county_fips": "30031",
+      "county_name": "Gallatin County",
+      "state_fips": "30"
+    },
+    "XNA": {
+      "county_fips": "05007",
+      "county_name": "Benton County",
+      "state_fips": "05"
+    },
+    "XWA": {
+      "county_fips": "38105",
+      "county_name": "Williams County",
+      "state_fips": "38"
+    },
+    "YAK": {
+      "county_fips": "02282",
+      "county_name": "Yakutat City and Borough",
+      "state_fips": "02"
+    },
+    "YKM": {
+      "county_fips": "53077",
+      "county_name": "Yakima County",
+      "state_fips": "53"
+    },
+    "Z09": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    },
+    "Z13": {
+      "county_fips": "02050",
+      "county_name": "Bethel Census Area",
+      "state_fips": "02"
+    }
+  }
+}

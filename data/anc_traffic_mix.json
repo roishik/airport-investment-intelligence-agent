@@ -1,0 +1,1450 @@
+{
+  "_meta": {
+    "description": "ANC departure mix, domestic vs. outbound international, monthly and by year -- the long-haul proxy for the 'percentage of long-haul flights out of Anchorage' question, replacing an earlier OpenFlights-route-count approach. See this module's build_anc_traffic_mix() docstring for the full reasoning, including why the true distance-threshold percentage isn't computable from any publicly downloadable BTS table.",
+    "source": "BTS T100 Segment Summary By Origin Airport (data.bts.gov, dataset r495-tyji), filtered to ANC",
+    "fetched_at": "2026-08-18",
+    "definition_note": "KEY DEFINITION, verified against the raw data: 'total_departures' ==\n    'domestic_departures' + 'outbound_international' exactly (checked on\n    every row). 'inbound_international' (flights arriving at ANC FROM\n    abroad, i.e. ANC as destination) is a separate figure BTS reports\n    alongside it and is deliberately EXCLUDED here -- it is not a flight\n    OUT OF Anchorage, so including it would answer a different question\n    (\"ANC's total international exposure\") under the guise of this one.",
+    "most_recent_full_calendar_year": "2025",
+    "months_covered": "2014-01 to 2026-04"
+  },
+  "annual": {
+    "2014": {
+      "total_departures": 78258,
+      "domestic_departures": 69235,
+      "outbound_international_departures": 9023,
+      "international_share": 0.1153,
+      "avg_domestic_distance_mi": 1078.5,
+      "avg_outbound_international_distance_mi": 4246.3
+    },
+    "2015": {
+      "total_departures": 79686,
+      "domestic_departures": 71482,
+      "outbound_international_departures": 8204,
+      "international_share": 0.103,
+      "avg_domestic_distance_mi": 1110.2,
+      "avg_outbound_international_distance_mi": 4211.1
+    },
+    "2016": {
+      "total_departures": 80043,
+      "domestic_departures": 71553,
+      "outbound_international_departures": 8490,
+      "international_share": 0.1061,
+      "avg_domestic_distance_mi": 1106.9,
+      "avg_outbound_international_distance_mi": 4244.5
+    },
+    "2017": {
+      "total_departures": 79904,
+      "domestic_departures": 69753,
+      "outbound_international_departures": 10151,
+      "international_share": 0.127,
+      "avg_domestic_distance_mi": 1180.2,
+      "avg_outbound_international_distance_mi": 4236.1
+    },
+    "2018": {
+      "total_departures": 79073,
+      "domestic_departures": 68853,
+      "outbound_international_departures": 10220,
+      "international_share": 0.1292,
+      "avg_domestic_distance_mi": 1208.0,
+      "avg_outbound_international_distance_mi": 4274.7
+    },
+    "2019": {
+      "total_departures": 77364,
+      "domestic_departures": 67101,
+      "outbound_international_departures": 10263,
+      "international_share": 0.1327,
+      "avg_domestic_distance_mi": 1241.6,
+      "avg_outbound_international_distance_mi": 4209.9
+    },
+    "2020": {
+      "total_departures": 70272,
+      "domestic_departures": 57048,
+      "outbound_international_departures": 13224,
+      "international_share": 0.1882,
+      "avg_domestic_distance_mi": 1500.9,
+      "avg_outbound_international_distance_mi": 4242.5
+    },
+    "2021": {
+      "total_departures": 84141,
+      "domestic_departures": 70808,
+      "outbound_international_departures": 13333,
+      "international_share": 0.1585,
+      "avg_domestic_distance_mi": 1419.0,
+      "avg_outbound_international_distance_mi": 4213.4
+    },
+    "2022": {
+      "total_departures": 85170,
+      "domestic_departures": 71696,
+      "outbound_international_departures": 13474,
+      "international_share": 0.1582,
+      "avg_domestic_distance_mi": 1359.9,
+      "avg_outbound_international_distance_mi": 4127.7
+    },
+    "2023": {
+      "total_departures": 85241,
+      "domestic_departures": 72062,
+      "outbound_international_departures": 13179,
+      "international_share": 0.1546,
+      "avg_domestic_distance_mi": 1316.1,
+      "avg_outbound_international_distance_mi": 4256.7
+    },
+    "2024": {
+      "total_departures": 93961,
+      "domestic_departures": 79667,
+      "outbound_international_departures": 14294,
+      "international_share": 0.1521,
+      "avg_domestic_distance_mi": 1346.6,
+      "avg_outbound_international_distance_mi": 4335.3
+    },
+    "2025": {
+      "total_departures": 87988,
+      "domestic_departures": 73921,
+      "outbound_international_departures": 14067,
+      "international_share": 0.1599,
+      "avg_domestic_distance_mi": 1457.5,
+      "avg_outbound_international_distance_mi": 4322.3
+    },
+    "2026": {
+      "total_departures": 24734,
+      "domestic_departures": 20883,
+      "outbound_international_departures": 3851,
+      "international_share": 0.1557,
+      "avg_domestic_distance_mi": 1461.7,
+      "avg_outbound_international_distance_mi": 4362.2
+    }
+  },
+  "monthly": [
+    {
+      "month": "2014-01",
+      "total_departures": 5890,
+      "domestic_departures": 5190,
+      "outbound_international_departures": 700,
+      "international_share": 0.1188,
+      "avg_domestic_distance_mi": 1052.693256262042,
+      "avg_outbound_international_distance_mi": 4317.161428571429
+    },
+    {
+      "month": "2014-02",
+      "total_departures": 4987,
+      "domestic_departures": 4446,
+      "outbound_international_departures": 541,
+      "international_share": 0.1085,
+      "avg_domestic_distance_mi": 978.576473234368,
+      "avg_outbound_international_distance_mi": 4199.861367837339
+    },
+    {
+      "month": "2014-03",
+      "total_departures": 6223,
+      "domestic_departures": 5450,
+      "outbound_international_departures": 773,
+      "international_share": 0.1242,
+      "avg_domestic_distance_mi": 1097.415412844037,
+      "avg_outbound_international_distance_mi": 4297.51617076326
+    },
+    {
+      "month": "2014-04",
+      "total_departures": 6105,
+      "domestic_departures": 5371,
+      "outbound_international_departures": 734,
+      "international_share": 0.1202,
+      "avg_domestic_distance_mi": 1069.353379258984,
+      "avg_outbound_international_distance_mi": 4294.043596730246
+    },
+    {
+      "month": "2014-05",
+      "total_departures": 6641,
+      "domestic_departures": 5882,
+      "outbound_international_departures": 759,
+      "international_share": 0.1143,
+      "avg_domestic_distance_mi": 1057.76096565794,
+      "avg_outbound_international_distance_mi": 4215.96442687747
+    },
+    {
+      "month": "2014-06",
+      "total_departures": 7217,
+      "domestic_departures": 6473,
+      "outbound_international_departures": 744,
+      "international_share": 0.1031,
+      "avg_domestic_distance_mi": 1084.781708635872,
+      "avg_outbound_international_distance_mi": 4140.620967741936
+    },
+    {
+      "month": "2014-07",
+      "total_departures": 7705,
+      "domestic_departures": 6952,
+      "outbound_international_departures": 753,
+      "international_share": 0.0977,
+      "avg_domestic_distance_mi": 1078.485327963176,
+      "avg_outbound_international_distance_mi": 4141.345285524569
+    },
+    {
+      "month": "2014-08",
+      "total_departures": 7486,
+      "domestic_departures": 6690,
+      "outbound_international_departures": 796,
+      "international_share": 0.1063,
+      "avg_domestic_distance_mi": 1102.394319880419,
+      "avg_outbound_international_distance_mi": 4172.582914572864
+    },
+    {
+      "month": "2014-09",
+      "total_departures": 6686,
+      "domestic_departures": 5902,
+      "outbound_international_departures": 784,
+      "international_share": 0.1173,
+      "avg_domestic_distance_mi": 1071.467807522873,
+      "avg_outbound_international_distance_mi": 4207.09693877551
+    },
+    {
+      "month": "2014-10",
+      "total_departures": 6598,
+      "domestic_departures": 5808,
+      "outbound_international_departures": 790,
+      "international_share": 0.1197,
+      "avg_domestic_distance_mi": 1063.95523415978,
+      "avg_outbound_international_distance_mi": 4330.953164556962
+    },
+    {
+      "month": "2014-11",
+      "total_departures": 6349,
+      "domestic_departures": 5478,
+      "outbound_international_departures": 871,
+      "international_share": 0.1372,
+      "avg_domestic_distance_mi": 1169.491967871486,
+      "avg_outbound_international_distance_mi": 4326.154994259472
+    },
+    {
+      "month": "2014-12",
+      "total_departures": 6371,
+      "domestic_departures": 5593,
+      "outbound_international_departures": 778,
+      "international_share": 0.1221,
+      "avg_domestic_distance_mi": 1092.196495619525,
+      "avg_outbound_international_distance_mi": 4290.345758354756
+    },
+    {
+      "month": "2015-01",
+      "total_departures": 5872,
+      "domestic_departures": 5239,
+      "outbound_international_departures": 633,
+      "international_share": 0.1078,
+      "avg_domestic_distance_mi": 1074.115098301203,
+      "avg_outbound_international_distance_mi": 4228.911532385466
+    },
+    {
+      "month": "2015-02",
+      "total_departures": 5439,
+      "domestic_departures": 4830,
+      "outbound_international_departures": 609,
+      "international_share": 0.112,
+      "avg_domestic_distance_mi": 1106.722360248447,
+      "avg_outbound_international_distance_mi": 4173.914614121511
+    },
+    {
+      "month": "2015-03",
+      "total_departures": 6489,
+      "domestic_departures": 5736,
+      "outbound_international_departures": 753,
+      "international_share": 0.116,
+      "avg_domestic_distance_mi": 1142.575313807531,
+      "avg_outbound_international_distance_mi": 4193.366533864541
+    },
+    {
+      "month": "2015-04",
+      "total_departures": 6217,
+      "domestic_departures": 5558,
+      "outbound_international_departures": 659,
+      "international_share": 0.106,
+      "avg_domestic_distance_mi": 1099.115329255128,
+      "avg_outbound_international_distance_mi": 4226.769347496206
+    },
+    {
+      "month": "2015-05",
+      "total_departures": 6791,
+      "domestic_departures": 6099,
+      "outbound_international_departures": 692,
+      "international_share": 0.1019,
+      "avg_domestic_distance_mi": 1098.226430562387,
+      "avg_outbound_international_distance_mi": 4173.666184971098
+    },
+    {
+      "month": "2015-06",
+      "total_departures": 7398,
+      "domestic_departures": 6727,
+      "outbound_international_departures": 671,
+      "international_share": 0.0907,
+      "avg_domestic_distance_mi": 1110.308607105693,
+      "avg_outbound_international_distance_mi": 4146.001490312966
+    },
+    {
+      "month": "2015-07",
+      "total_departures": 8023,
+      "domestic_departures": 7343,
+      "outbound_international_departures": 680,
+      "international_share": 0.0848,
+      "avg_domestic_distance_mi": 1098.809750783059,
+      "avg_outbound_international_distance_mi": 4123.970588235294
+    },
+    {
+      "month": "2015-08",
+      "total_departures": 7561,
+      "domestic_departures": 6844,
+      "outbound_international_departures": 717,
+      "international_share": 0.0948,
+      "avg_domestic_distance_mi": 1129.741671537113,
+      "avg_outbound_international_distance_mi": 4120.242677824268
+    },
+    {
+      "month": "2015-09",
+      "total_departures": 6737,
+      "domestic_departures": 6068,
+      "outbound_international_departures": 669,
+      "international_share": 0.0993,
+      "avg_domestic_distance_mi": 1091.814765985498,
+      "avg_outbound_international_distance_mi": 4235.760837070254
+    },
+    {
+      "month": "2015-10",
+      "total_departures": 6562,
+      "domestic_departures": 5884,
+      "outbound_international_departures": 678,
+      "international_share": 0.1033,
+      "avg_domestic_distance_mi": 1084.976716519375,
+      "avg_outbound_international_distance_mi": 4289.396755162242
+    },
+    {
+      "month": "2015-11",
+      "total_departures": 6240,
+      "domestic_departures": 5485,
+      "outbound_international_departures": 755,
+      "international_share": 0.121,
+      "avg_domestic_distance_mi": 1173.981039197812,
+      "avg_outbound_international_distance_mi": 4313.988079470198
+    },
+    {
+      "month": "2015-12",
+      "total_departures": 6357,
+      "domestic_departures": 5669,
+      "outbound_international_departures": 688,
+      "international_share": 0.1082,
+      "avg_domestic_distance_mi": 1112.991356500265,
+      "avg_outbound_international_distance_mi": 4300.469476744186
+    },
+    {
+      "month": "2016-01",
+      "total_departures": 6025,
+      "domestic_departures": 5408,
+      "outbound_international_departures": 617,
+      "international_share": 0.1024,
+      "avg_domestic_distance_mi": 1066.84726331361,
+      "avg_outbound_international_distance_mi": 4285.119935170178
+    },
+    {
+      "month": "2016-02",
+      "total_departures": 5409,
+      "domestic_departures": 4909,
+      "outbound_international_departures": 500,
+      "international_share": 0.0924,
+      "avg_domestic_distance_mi": 1006.567732735791,
+      "avg_outbound_international_distance_mi": 4264.666
+    },
+    {
+      "month": "2016-03",
+      "total_departures": 6217,
+      "domestic_departures": 5590,
+      "outbound_international_departures": 627,
+      "international_share": 0.1009,
+      "avg_domestic_distance_mi": 1094.870661896243,
+      "avg_outbound_international_distance_mi": 4296.850079744817
+    },
+    {
+      "month": "2016-04",
+      "total_departures": 6168,
+      "domestic_departures": 5534,
+      "outbound_international_departures": 634,
+      "international_share": 0.1028,
+      "avg_domestic_distance_mi": 1071.184857246115,
+      "avg_outbound_international_distance_mi": 4296.957413249212
+    },
+    {
+      "month": "2016-05",
+      "total_departures": 6645,
+      "domestic_departures": 5995,
+      "outbound_international_departures": 650,
+      "international_share": 0.0978,
+      "avg_domestic_distance_mi": 1070.756797331109,
+      "avg_outbound_international_distance_mi": 4195.426153846154
+    },
+    {
+      "month": "2016-06",
+      "total_departures": 7510,
+      "domestic_departures": 6856,
+      "outbound_international_departures": 654,
+      "international_share": 0.0871,
+      "avg_domestic_distance_mi": 1090.375583430572,
+      "avg_outbound_international_distance_mi": 4152.90366972477
+    },
+    {
+      "month": "2016-07",
+      "total_departures": 7990,
+      "domestic_departures": 7263,
+      "outbound_international_departures": 727,
+      "international_share": 0.091,
+      "avg_domestic_distance_mi": 1116.093625223737,
+      "avg_outbound_international_distance_mi": 4123.674002751031
+    },
+    {
+      "month": "2016-08",
+      "total_departures": 7768,
+      "domestic_departures": 7025,
+      "outbound_international_departures": 743,
+      "international_share": 0.0956,
+      "avg_domestic_distance_mi": 1120.952170818505,
+      "avg_outbound_international_distance_mi": 4125.559892328399
+    },
+    {
+      "month": "2016-09",
+      "total_departures": 6747,
+      "domestic_departures": 5980,
+      "outbound_international_departures": 767,
+      "international_share": 0.1137,
+      "avg_domestic_distance_mi": 1125.428762541806,
+      "avg_outbound_international_distance_mi": 4213.25814863103
+    },
+    {
+      "month": "2016-10",
+      "total_departures": 6603,
+      "domestic_departures": 5763,
+      "outbound_international_departures": 840,
+      "international_share": 0.1272,
+      "avg_domestic_distance_mi": 1143.285268089537,
+      "avg_outbound_international_distance_mi": 4322.692857142857
+    },
+    {
+      "month": "2016-11",
+      "total_departures": 6500,
+      "domestic_departures": 5599,
+      "outbound_international_departures": 901,
+      "international_share": 0.1386,
+      "avg_domestic_distance_mi": 1197.133059474906,
+      "avg_outbound_international_distance_mi": 4334.512763596004
+    },
+    {
+      "month": "2016-12",
+      "total_departures": 6461,
+      "domestic_departures": 5631,
+      "outbound_international_departures": 830,
+      "international_share": 0.1285,
+      "avg_domestic_distance_mi": 1162.855975847984,
+      "avg_outbound_international_distance_mi": 4297.878313253012
+    },
+    {
+      "month": "2017-01",
+      "total_departures": 6045,
+      "domestic_departures": 5291,
+      "outbound_international_departures": 754,
+      "international_share": 0.1247,
+      "avg_domestic_distance_mi": 1153.148365148365,
+      "avg_outbound_international_distance_mi": 4269.152519893899
+    },
+    {
+      "month": "2017-02",
+      "total_departures": 5184,
+      "domestic_departures": 4585,
+      "outbound_international_departures": 599,
+      "international_share": 0.1155,
+      "avg_domestic_distance_mi": 1084.347873500545,
+      "avg_outbound_international_distance_mi": 4242.679465776294
+    },
+    {
+      "month": "2017-03",
+      "total_departures": 6461,
+      "domestic_departures": 5624,
+      "outbound_international_departures": 837,
+      "international_share": 0.1295,
+      "avg_domestic_distance_mi": 1155.837482219061,
+      "avg_outbound_international_distance_mi": 4266.574671445639
+    },
+    {
+      "month": "2017-04",
+      "total_departures": 6277,
+      "domestic_departures": 5470,
+      "outbound_international_departures": 807,
+      "international_share": 0.1286,
+      "avg_domestic_distance_mi": 1158.209323583181,
+      "avg_outbound_international_distance_mi": 4254.500619578686
+    },
+    {
+      "month": "2017-05",
+      "total_departures": 6763,
+      "domestic_departures": 5910,
+      "outbound_international_departures": 853,
+      "international_share": 0.1261,
+      "avg_domestic_distance_mi": 1133.63434856176,
+      "avg_outbound_international_distance_mi": 4177.260257913247
+    },
+    {
+      "month": "2017-06",
+      "total_departures": 7759,
+      "domestic_departures": 6860,
+      "outbound_international_departures": 899,
+      "international_share": 0.1159,
+      "avg_domestic_distance_mi": 1163.257288629738,
+      "avg_outbound_international_distance_mi": 4144.385984427141
+    },
+    {
+      "month": "2017-07",
+      "total_departures": 7997,
+      "domestic_departures": 7078,
+      "outbound_international_departures": 919,
+      "international_share": 0.1149,
+      "avg_domestic_distance_mi": 1185.118818875389,
+      "avg_outbound_international_distance_mi": 4160.823721436343
+    },
+    {
+      "month": "2017-08",
+      "total_departures": 7789,
+      "domestic_departures": 6883,
+      "outbound_international_departures": 906,
+      "international_share": 0.1163,
+      "avg_domestic_distance_mi": 1169.773935783815,
+      "avg_outbound_international_distance_mi": 4158.663355408388
+    },
+    {
+      "month": "2017-09",
+      "total_departures": 6922,
+      "domestic_departures": 6017,
+      "outbound_international_departures": 905,
+      "international_share": 0.1307,
+      "avg_domestic_distance_mi": 1195.002492936679,
+      "avg_outbound_international_distance_mi": 4216.340331491712
+    },
+    {
+      "month": "2017-10",
+      "total_departures": 6393,
+      "domestic_departures": 5520,
+      "outbound_international_departures": 873,
+      "international_share": 0.1366,
+      "avg_domestic_distance_mi": 1189.952536231884,
+      "avg_outbound_international_distance_mi": 4294.851088201603
+    },
+    {
+      "month": "2017-11",
+      "total_departures": 6257,
+      "domestic_departures": 5346,
+      "outbound_international_departures": 911,
+      "international_share": 0.1456,
+      "avg_domestic_distance_mi": 1297.823606434717,
+      "avg_outbound_international_distance_mi": 4347.154774972558
+    },
+    {
+      "month": "2017-12",
+      "total_departures": 6057,
+      "domestic_departures": 5169,
+      "outbound_international_departures": 888,
+      "international_share": 0.1466,
+      "avg_domestic_distance_mi": 1276.770748694138,
+      "avg_outbound_international_distance_mi": 4312.309684684685
+    },
+    {
+      "month": "2018-01",
+      "total_departures": 5989,
+      "domestic_departures": 5185,
+      "outbound_international_departures": 804,
+      "international_share": 0.1342,
+      "avg_domestic_distance_mi": 1191.940790742527,
+      "avg_outbound_international_distance_mi": 4318.509950248756
+    },
+    {
+      "month": "2018-02",
+      "total_departures": 5146,
+      "domestic_departures": 4462,
+      "outbound_international_departures": 684,
+      "international_share": 0.1329,
+      "avg_domestic_distance_mi": 1170.399372478709,
+      "avg_outbound_international_distance_mi": 4257.780701754386
+    },
+    {
+      "month": "2018-03",
+      "total_departures": 6286,
+      "domestic_departures": 5413,
+      "outbound_international_departures": 873,
+      "international_share": 0.1389,
+      "avg_domestic_distance_mi": 1200.915758359505,
+      "avg_outbound_international_distance_mi": 4273.604810996563
+    },
+    {
+      "month": "2018-04",
+      "total_departures": 6110,
+      "domestic_departures": 5273,
+      "outbound_international_departures": 837,
+      "international_share": 0.137,
+      "avg_domestic_distance_mi": 1210.992983121563,
+      "avg_outbound_international_distance_mi": 4287.811230585424
+    },
+    {
+      "month": "2018-05",
+      "total_departures": 6724,
+      "domestic_departures": 5852,
+      "outbound_international_departures": 872,
+      "international_share": 0.1297,
+      "avg_domestic_distance_mi": 1164.253759398496,
+      "avg_outbound_international_distance_mi": 4212.75
+    },
+    {
+      "month": "2018-06",
+      "total_departures": 7599,
+      "domestic_departures": 6749,
+      "outbound_international_departures": 850,
+      "international_share": 0.1119,
+      "avg_domestic_distance_mi": 1185.696695806786,
+      "avg_outbound_international_distance_mi": 4225.224705882353
+    },
+    {
+      "month": "2018-07",
+      "total_departures": 7811,
+      "domestic_departures": 6958,
+      "outbound_international_departures": 853,
+      "international_share": 0.1092,
+      "avg_domestic_distance_mi": 1189.915924116125,
+      "avg_outbound_international_distance_mi": 4220.838218053927
+    },
+    {
+      "month": "2018-08",
+      "total_departures": 7618,
+      "domestic_departures": 6839,
+      "outbound_international_departures": 779,
+      "international_share": 0.1023,
+      "avg_domestic_distance_mi": 1172.961982746016,
+      "avg_outbound_international_distance_mi": 4190.605905006419
+    },
+    {
+      "month": "2018-09",
+      "total_departures": 6874,
+      "domestic_departures": 5958,
+      "outbound_international_departures": 916,
+      "international_share": 0.1333,
+      "avg_domestic_distance_mi": 1243.444108761329,
+      "avg_outbound_international_distance_mi": 4312.684497816594
+    },
+    {
+      "month": "2018-10",
+      "total_departures": 6604,
+      "domestic_departures": 5657,
+      "outbound_international_departures": 947,
+      "international_share": 0.1434,
+      "avg_domestic_distance_mi": 1212.667668375464,
+      "avg_outbound_international_distance_mi": 4314.810982048574
+    },
+    {
+      "month": "2018-11",
+      "total_departures": 6188,
+      "domestic_departures": 5264,
+      "outbound_international_departures": 924,
+      "international_share": 0.1493,
+      "avg_domestic_distance_mi": 1297.565349544073,
+      "avg_outbound_international_distance_mi": 4339.265151515152
+    },
+    {
+      "month": "2018-12",
+      "total_departures": 6124,
+      "domestic_departures": 5243,
+      "outbound_international_departures": 881,
+      "international_share": 0.1439,
+      "avg_domestic_distance_mi": 1272.774556551593,
+      "avg_outbound_international_distance_mi": 4321.231555051078
+    },
+    {
+      "month": "2019-01",
+      "total_departures": 5690,
+      "domestic_departures": 4938,
+      "outbound_international_departures": 752,
+      "international_share": 0.1322,
+      "avg_domestic_distance_mi": 1239.822397731875,
+      "avg_outbound_international_distance_mi": 4292.295212765957
+    },
+    {
+      "month": "2019-02",
+      "total_departures": 4818,
+      "domestic_departures": 4208,
+      "outbound_international_departures": 610,
+      "international_share": 0.1266,
+      "avg_domestic_distance_mi": 1169.934410646388,
+      "avg_outbound_international_distance_mi": 4238.991803278688
+    },
+    {
+      "month": "2019-03",
+      "total_departures": 6101,
+      "domestic_departures": 5233,
+      "outbound_international_departures": 868,
+      "international_share": 0.1423,
+      "avg_domestic_distance_mi": 1237.063825721384,
+      "avg_outbound_international_distance_mi": 4312.047235023041
+    },
+    {
+      "month": "2019-04",
+      "total_departures": 5697,
+      "domestic_departures": 4847,
+      "outbound_international_departures": 850,
+      "international_share": 0.1492,
+      "avg_domestic_distance_mi": 1294.944914380029,
+      "avg_outbound_international_distance_mi": 4281.248235294118
+    },
+    {
+      "month": "2019-05",
+      "total_departures": 6516,
+      "domestic_departures": 5616,
+      "outbound_international_departures": 900,
+      "international_share": 0.1381,
+      "avg_domestic_distance_mi": 1226.713675213675,
+      "avg_outbound_international_distance_mi": 4221.074444444444
+    },
+    {
+      "month": "2019-06",
+      "total_departures": 7373,
+      "domestic_departures": 6442,
+      "outbound_international_departures": 931,
+      "international_share": 0.1263,
+      "avg_domestic_distance_mi": 1276.624650729587,
+      "avg_outbound_international_distance_mi": 4065.18045112782
+    },
+    {
+      "month": "2019-07",
+      "total_departures": 7983,
+      "domestic_departures": 7106,
+      "outbound_international_departures": 877,
+      "international_share": 0.1099,
+      "avg_domestic_distance_mi": 1195.478609625668,
+      "avg_outbound_international_distance_mi": 4090.339794754846
+    },
+    {
+      "month": "2019-08",
+      "total_departures": 7727,
+      "domestic_departures": 6829,
+      "outbound_international_departures": 898,
+      "international_share": 0.1162,
+      "avg_domestic_distance_mi": 1254.385854444282,
+      "avg_outbound_international_distance_mi": 4089.658129175947
+    },
+    {
+      "month": "2019-09",
+      "total_departures": 6814,
+      "domestic_departures": 5868,
+      "outbound_international_departures": 946,
+      "international_share": 0.1388,
+      "avg_domestic_distance_mi": 1227.147750511248,
+      "avg_outbound_international_distance_mi": 4029.270613107823
+    },
+    {
+      "month": "2019-10",
+      "total_departures": 6369,
+      "domestic_departures": 5490,
+      "outbound_international_departures": 879,
+      "international_share": 0.138,
+      "avg_domestic_distance_mi": 1229.871220400729,
+      "avg_outbound_international_distance_mi": 4314.122866894198
+    },
+    {
+      "month": "2019-11",
+      "total_departures": 6210,
+      "domestic_departures": 5253,
+      "outbound_international_departures": 957,
+      "international_share": 0.1541,
+      "avg_domestic_distance_mi": 1320.57928802589,
+      "avg_outbound_international_distance_mi": 4293.169278996866
+    },
+    {
+      "month": "2019-12",
+      "total_departures": 6066,
+      "domestic_departures": 5271,
+      "outbound_international_departures": 795,
+      "international_share": 0.1311,
+      "avg_domestic_distance_mi": 1224.609182318346,
+      "avg_outbound_international_distance_mi": 4346.144654088051
+    },
+    {
+      "month": "2020-01",
+      "total_departures": 5836,
+      "domestic_departures": 5120,
+      "outbound_international_departures": 716,
+      "international_share": 0.1227,
+      "avg_domestic_distance_mi": 1189.37578125,
+      "avg_outbound_international_distance_mi": 4325.208100558659
+    },
+    {
+      "month": "2020-02",
+      "total_departures": 5122,
+      "domestic_departures": 4484,
+      "outbound_international_departures": 638,
+      "international_share": 0.1246,
+      "avg_domestic_distance_mi": 1135.757805530776,
+      "avg_outbound_international_distance_mi": 4197.145768025079
+    },
+    {
+      "month": "2020-03",
+      "total_departures": 5284,
+      "domestic_departures": 4296,
+      "outbound_international_departures": 988,
+      "international_share": 0.187,
+      "avg_domestic_distance_mi": 1544.219040968343,
+      "avg_outbound_international_distance_mi": 4270.411943319838
+    },
+    {
+      "month": "2020-04",
+      "total_departures": 4987,
+      "domestic_departures": 3821,
+      "outbound_international_departures": 1166,
+      "international_share": 0.2338,
+      "avg_domestic_distance_mi": 1730.331588589374,
+      "avg_outbound_international_distance_mi": 4227.909090909091
+    },
+    {
+      "month": "2020-05",
+      "total_departures": 5645,
+      "domestic_departures": 4224,
+      "outbound_international_departures": 1421,
+      "international_share": 0.2517,
+      "avg_domestic_distance_mi": 1690.704545454545,
+      "avg_outbound_international_distance_mi": 4202.86136523575
+    },
+    {
+      "month": "2020-06",
+      "total_departures": 6116,
+      "domestic_departures": 4809,
+      "outbound_international_departures": 1307,
+      "international_share": 0.2137,
+      "avg_domestic_distance_mi": 1563.30754834685,
+      "avg_outbound_international_distance_mi": 4265.080336648814
+    },
+    {
+      "month": "2020-07",
+      "total_departures": 6422,
+      "domestic_departures": 5229,
+      "outbound_international_departures": 1193,
+      "international_share": 0.1858,
+      "avg_domestic_distance_mi": 1521.470644482693,
+      "avg_outbound_international_distance_mi": 4259.701592623638
+    },
+    {
+      "month": "2020-08",
+      "total_departures": 6497,
+      "domestic_departures": 5358,
+      "outbound_international_departures": 1139,
+      "international_share": 0.1753,
+      "avg_domestic_distance_mi": 1480.755505785741,
+      "avg_outbound_international_distance_mi": 4244.320456540825
+    },
+    {
+      "month": "2020-09",
+      "total_departures": 6138,
+      "domestic_departures": 4999,
+      "outbound_international_departures": 1139,
+      "international_share": 0.1856,
+      "avg_domestic_distance_mi": 1514.102020404081,
+      "avg_outbound_international_distance_mi": 4245.697980684811
+    },
+    {
+      "month": "2020-10",
+      "total_departures": 6225,
+      "domestic_departures": 5014,
+      "outbound_international_departures": 1211,
+      "international_share": 0.1945,
+      "avg_domestic_distance_mi": 1538.030514559234,
+      "avg_outbound_international_distance_mi": 4236.880264244426
+    },
+    {
+      "month": "2020-11",
+      "total_departures": 6204,
+      "domestic_departures": 4970,
+      "outbound_international_departures": 1234,
+      "international_share": 0.1989,
+      "avg_domestic_distance_mi": 1620.426559356137,
+      "avg_outbound_international_distance_mi": 4210.250405186386
+    },
+    {
+      "month": "2020-12",
+      "total_departures": 5796,
+      "domestic_departures": 4724,
+      "outbound_international_departures": 1072,
+      "international_share": 0.185,
+      "avg_domestic_distance_mi": 1548.076206604572,
+      "avg_outbound_international_distance_mi": 4248.798507462687
+    },
+    {
+      "month": "2021-01",
+      "total_departures": 6050,
+      "domestic_departures": 5014,
+      "outbound_international_departures": 1036,
+      "international_share": 0.1712,
+      "avg_domestic_distance_mi": 1438.195452732349,
+      "avg_outbound_international_distance_mi": 4212.962355212355
+    },
+    {
+      "month": "2021-02",
+      "total_departures": 5362,
+      "domestic_departures": 4499,
+      "outbound_international_departures": 863,
+      "international_share": 0.1609,
+      "avg_domestic_distance_mi": 1413.783507446099,
+      "avg_outbound_international_distance_mi": 4223.475086906142
+    },
+    {
+      "month": "2021-03",
+      "total_departures": 6135,
+      "domestic_departures": 5158,
+      "outbound_international_departures": 977,
+      "international_share": 0.1593,
+      "avg_domestic_distance_mi": 1382.720434276851,
+      "avg_outbound_international_distance_mi": 4179.589559877175
+    },
+    {
+      "month": "2021-04",
+      "total_departures": 6432,
+      "domestic_departures": 5362,
+      "outbound_international_departures": 1070,
+      "international_share": 0.1664,
+      "avg_domestic_distance_mi": 1407.67903767251,
+      "avg_outbound_international_distance_mi": 4168.835514018691
+    },
+    {
+      "month": "2021-05",
+      "total_departures": 6989,
+      "domestic_departures": 5866,
+      "outbound_international_departures": 1123,
+      "international_share": 0.1607,
+      "avg_domestic_distance_mi": 1421.553869757927,
+      "avg_outbound_international_distance_mi": 4228.694568121105
+    },
+    {
+      "month": "2021-06",
+      "total_departures": 7883,
+      "domestic_departures": 6796,
+      "outbound_international_departures": 1087,
+      "international_share": 0.1379,
+      "avg_domestic_distance_mi": 1374.85888758093,
+      "avg_outbound_international_distance_mi": 4231.554737810487
+    },
+    {
+      "month": "2021-07",
+      "total_departures": 8656,
+      "domestic_departures": 7453,
+      "outbound_international_departures": 1203,
+      "international_share": 0.139,
+      "avg_domestic_distance_mi": 1360.372869985241,
+      "avg_outbound_international_distance_mi": 4247.891936824605
+    },
+    {
+      "month": "2021-08",
+      "total_departures": 8221,
+      "domestic_departures": 7025,
+      "outbound_international_departures": 1196,
+      "international_share": 0.1455,
+      "avg_domestic_distance_mi": 1413.111316725979,
+      "avg_outbound_international_distance_mi": 4229.088628762542
+    },
+    {
+      "month": "2021-09",
+      "total_departures": 7319,
+      "domestic_departures": 6108,
+      "outbound_international_departures": 1211,
+      "international_share": 0.1655,
+      "avg_domestic_distance_mi": 1443.909462999345,
+      "avg_outbound_international_distance_mi": 4216.067712634187
+    },
+    {
+      "month": "2021-10",
+      "total_departures": 7387,
+      "domestic_departures": 6101,
+      "outbound_international_departures": 1286,
+      "international_share": 0.1741,
+      "avg_domestic_distance_mi": 1496.143583019177,
+      "avg_outbound_international_distance_mi": 4195.073872472783
+    },
+    {
+      "month": "2021-11",
+      "total_departures": 6816,
+      "domestic_departures": 5636,
+      "outbound_international_departures": 1180,
+      "international_share": 0.1731,
+      "avg_domestic_distance_mi": 1465.396380411639,
+      "avg_outbound_international_distance_mi": 4192.716949152542
+    },
+    {
+      "month": "2021-12",
+      "total_departures": 6891,
+      "domestic_departures": 5790,
+      "outbound_international_departures": 1101,
+      "international_share": 0.1598,
+      "avg_domestic_distance_mi": 1427.913471502591,
+      "avg_outbound_international_distance_mi": 4231.485013623978
+    },
+    {
+      "month": "2022-01",
+      "total_departures": 6333,
+      "domestic_departures": 5289,
+      "outbound_international_departures": 1044,
+      "international_share": 0.1649,
+      "avg_domestic_distance_mi": 1430.599735299679,
+      "avg_outbound_international_distance_mi": 4069.95785440613
+    },
+    {
+      "month": "2022-02",
+      "total_departures": 5561,
+      "domestic_departures": 4709,
+      "outbound_international_departures": 852,
+      "international_share": 0.1532,
+      "avg_domestic_distance_mi": 1394.613293692928,
+      "avg_outbound_international_distance_mi": 4079.111502347418
+    },
+    {
+      "month": "2022-03",
+      "total_departures": 6829,
+      "domestic_departures": 5728,
+      "outbound_international_departures": 1101,
+      "international_share": 0.1612,
+      "avg_domestic_distance_mi": 1360.823149441341,
+      "avg_outbound_international_distance_mi": 4059.271571298819
+    },
+    {
+      "month": "2022-04",
+      "total_departures": 6751,
+      "domestic_departures": 5714,
+      "outbound_international_departures": 1037,
+      "international_share": 0.1536,
+      "avg_domestic_distance_mi": 1352.948197409871,
+      "avg_outbound_international_distance_mi": 4087.044358727097
+    },
+    {
+      "month": "2022-05",
+      "total_departures": 7254,
+      "domestic_departures": 6156,
+      "outbound_international_departures": 1098,
+      "international_share": 0.1514,
+      "avg_domestic_distance_mi": 1349.25032488629,
+      "avg_outbound_international_distance_mi": 4049.681238615665
+    },
+    {
+      "month": "2022-06",
+      "total_departures": 8429,
+      "domestic_departures": 7185,
+      "outbound_international_departures": 1244,
+      "international_share": 0.1476,
+      "avg_domestic_distance_mi": 1337.98524704245,
+      "avg_outbound_international_distance_mi": 4075.915594855305
+    },
+    {
+      "month": "2022-07",
+      "total_departures": 8569,
+      "domestic_departures": 7399,
+      "outbound_international_departures": 1170,
+      "international_share": 0.1365,
+      "avg_domestic_distance_mi": 1326.900662251656,
+      "avg_outbound_international_distance_mi": 4055.031623931624
+    },
+    {
+      "month": "2022-08",
+      "total_departures": 8301,
+      "domestic_departures": 7132,
+      "outbound_international_departures": 1169,
+      "international_share": 0.1408,
+      "avg_domestic_distance_mi": 1329.69601794728,
+      "avg_outbound_international_distance_mi": 4114.557741659538
+    },
+    {
+      "month": "2022-09",
+      "total_departures": 7324,
+      "domestic_departures": 6080,
+      "outbound_international_departures": 1244,
+      "international_share": 0.1699,
+      "avg_domestic_distance_mi": 1386.01052631579,
+      "avg_outbound_international_distance_mi": 4209.309485530546
+    },
+    {
+      "month": "2022-10",
+      "total_departures": 6944,
+      "domestic_departures": 5721,
+      "outbound_international_departures": 1223,
+      "international_share": 0.1761,
+      "avg_domestic_distance_mi": 1364.172172697081,
+      "avg_outbound_international_distance_mi": 4220.891251022077
+    },
+    {
+      "month": "2022-11",
+      "total_departures": 6548,
+      "domestic_departures": 5351,
+      "outbound_international_departures": 1197,
+      "international_share": 0.1828,
+      "avg_domestic_distance_mi": 1368.214913100355,
+      "avg_outbound_international_distance_mi": 4236.9440267335
+    },
+    {
+      "month": "2022-12",
+      "total_departures": 6327,
+      "domestic_departures": 5232,
+      "outbound_international_departures": 1095,
+      "international_share": 0.1731,
+      "avg_domestic_distance_mi": 1350.671636085627,
+      "avg_outbound_international_distance_mi": 4240.29497716895
+    },
+    {
+      "month": "2023-01",
+      "total_departures": 5953,
+      "domestic_departures": 5026,
+      "outbound_international_departures": 927,
+      "international_share": 0.1557,
+      "avg_domestic_distance_mi": 1300.763231197772,
+      "avg_outbound_international_distance_mi": 4228.588996763754
+    },
+    {
+      "month": "2023-02",
+      "total_departures": 5434,
+      "domestic_departures": 4584,
+      "outbound_international_departures": 850,
+      "international_share": 0.1564,
+      "avg_domestic_distance_mi": 1304.660340314136,
+      "avg_outbound_international_distance_mi": 4177.38705882353
+    },
+    {
+      "month": "2023-03",
+      "total_departures": 6672,
+      "domestic_departures": 5518,
+      "outbound_international_departures": 1154,
+      "international_share": 0.173,
+      "avg_domestic_distance_mi": 1351.476803189561,
+      "avg_outbound_international_distance_mi": 4270.876083188909
+    },
+    {
+      "month": "2023-04",
+      "total_departures": 6310,
+      "domestic_departures": 5280,
+      "outbound_international_departures": 1030,
+      "international_share": 0.1632,
+      "avg_domestic_distance_mi": 1362.040151515152,
+      "avg_outbound_international_distance_mi": 4248.763106796117
+    },
+    {
+      "month": "2023-05",
+      "total_departures": 6856,
+      "domestic_departures": 5787,
+      "outbound_international_departures": 1069,
+      "international_share": 0.1559,
+      "avg_domestic_distance_mi": 1342.645412130638,
+      "avg_outbound_international_distance_mi": 4245.971936389149
+    },
+    {
+      "month": "2023-06",
+      "total_departures": 7934,
+      "domestic_departures": 6846,
+      "outbound_international_departures": 1088,
+      "international_share": 0.1371,
+      "avg_domestic_distance_mi": 1273.087058136138,
+      "avg_outbound_international_distance_mi": 4214.434742647059
+    },
+    {
+      "month": "2023-07",
+      "total_departures": 8560,
+      "domestic_departures": 7456,
+      "outbound_international_departures": 1104,
+      "international_share": 0.129,
+      "avg_domestic_distance_mi": 1268.133583690987,
+      "avg_outbound_international_distance_mi": 4194.077898550725
+    },
+    {
+      "month": "2023-08",
+      "total_departures": 8699,
+      "domestic_departures": 7511,
+      "outbound_international_departures": 1188,
+      "international_share": 0.1366,
+      "avg_domestic_distance_mi": 1288.742377845826,
+      "avg_outbound_international_distance_mi": 4218.170033670033
+    },
+    {
+      "month": "2023-09",
+      "total_departures": 7671,
+      "domestic_departures": 6487,
+      "outbound_international_departures": 1184,
+      "international_share": 0.1543,
+      "avg_domestic_distance_mi": 1283.322491136118,
+      "avg_outbound_international_distance_mi": 4256.818412162163
+    },
+    {
+      "month": "2023-10",
+      "total_departures": 7234,
+      "domestic_departures": 6080,
+      "outbound_international_departures": 1154,
+      "international_share": 0.1595,
+      "avg_domestic_distance_mi": 1313.626644736842,
+      "avg_outbound_international_distance_mi": 4329.528596187175
+    },
+    {
+      "month": "2023-11",
+      "total_departures": 6948,
+      "domestic_departures": 5733,
+      "outbound_international_departures": 1215,
+      "international_share": 0.1749,
+      "avg_domestic_distance_mi": 1367.231815803244,
+      "avg_outbound_international_distance_mi": 4326.589300411522
+    },
+    {
+      "month": "2023-12",
+      "total_departures": 6970,
+      "domestic_departures": 5754,
+      "outbound_international_departures": 1216,
+      "international_share": 0.1745,
+      "avg_domestic_distance_mi": 1373.225582203684,
+      "avg_outbound_international_distance_mi": 4329.902138157895
+    },
+    {
+      "month": "2024-01",
+      "total_departures": 6698,
+      "domestic_departures": 5560,
+      "outbound_international_departures": 1138,
+      "international_share": 0.1699,
+      "avg_domestic_distance_mi": 1278.069784172662,
+      "avg_outbound_international_distance_mi": 4309.465729349737
+    },
+    {
+      "month": "2024-02",
+      "total_departures": 6087,
+      "domestic_departures": 5184,
+      "outbound_international_departures": 903,
+      "international_share": 0.1483,
+      "avg_domestic_distance_mi": 1264.994984567901,
+      "avg_outbound_international_distance_mi": 4309.349944629014
+    },
+    {
+      "month": "2024-03",
+      "total_departures": 7137,
+      "domestic_departures": 6012,
+      "outbound_international_departures": 1125,
+      "international_share": 0.1576,
+      "avg_domestic_distance_mi": 1287.261144377911,
+      "avg_outbound_international_distance_mi": 4310.051555555556
+    },
+    {
+      "month": "2024-04",
+      "total_departures": 7074,
+      "domestic_departures": 6042,
+      "outbound_international_departures": 1032,
+      "international_share": 0.1459,
+      "avg_domestic_distance_mi": 1301.011089043363,
+      "avg_outbound_international_distance_mi": 4355.761627906977
+    },
+    {
+      "month": "2024-05",
+      "total_departures": 8208,
+      "domestic_departures": 6922,
+      "outbound_international_departures": 1286,
+      "international_share": 0.1567,
+      "avg_domestic_distance_mi": 1337.259607049986,
+      "avg_outbound_international_distance_mi": 4294.44167962675
+    },
+    {
+      "month": "2024-06",
+      "total_departures": 8996,
+      "domestic_departures": 7808,
+      "outbound_international_departures": 1188,
+      "international_share": 0.1321,
+      "avg_domestic_distance_mi": 1323.990522540984,
+      "avg_outbound_international_distance_mi": 4302.351851851852
+    },
+    {
+      "month": "2024-07",
+      "total_departures": 9535,
+      "domestic_departures": 8331,
+      "outbound_international_departures": 1204,
+      "international_share": 0.1263,
+      "avg_domestic_distance_mi": 1316.392509902773,
+      "avg_outbound_international_distance_mi": 4318.000830564784
+    },
+    {
+      "month": "2024-08",
+      "total_departures": 9419,
+      "domestic_departures": 8159,
+      "outbound_international_departures": 1260,
+      "international_share": 0.1338,
+      "avg_domestic_distance_mi": 1323.127466601299,
+      "avg_outbound_international_distance_mi": 4338.255555555555
+    },
+    {
+      "month": "2024-09",
+      "total_departures": 8096,
+      "domestic_departures": 6859,
+      "outbound_international_departures": 1237,
+      "international_share": 0.1528,
+      "avg_domestic_distance_mi": 1376.279341011809,
+      "avg_outbound_international_distance_mi": 4339.88439773646
+    },
+    {
+      "month": "2024-10",
+      "total_departures": 8002,
+      "domestic_departures": 6684,
+      "outbound_international_departures": 1318,
+      "international_share": 0.1647,
+      "avg_domestic_distance_mi": 1407.754637941352,
+      "avg_outbound_international_distance_mi": 4401.276176024279
+    },
+    {
+      "month": "2024-11",
+      "total_departures": 7519,
+      "domestic_departures": 6171,
+      "outbound_international_departures": 1348,
+      "international_share": 0.1793,
+      "avg_domestic_distance_mi": 1452.582725652244,
+      "avg_outbound_international_distance_mi": 4376.025964391692
+    },
+    {
+      "month": "2024-12",
+      "total_departures": 7190,
+      "domestic_departures": 5935,
+      "outbound_international_departures": 1255,
+      "international_share": 0.1745,
+      "avg_domestic_distance_mi": 1490.957708508846,
+      "avg_outbound_international_distance_mi": 4351.839043824702
+    },
+    {
+      "month": "2025-01",
+      "total_departures": 6805,
+      "domestic_departures": 5634,
+      "outbound_international_departures": 1171,
+      "international_share": 0.1721,
+      "avg_domestic_distance_mi": 1457.204827831026,
+      "avg_outbound_international_distance_mi": 4332.32536293766
+    },
+    {
+      "month": "2025-02",
+      "total_departures": 5727,
+      "domestic_departures": 4856,
+      "outbound_international_departures": 871,
+      "international_share": 0.1521,
+      "avg_domestic_distance_mi": 1344.926276771005,
+      "avg_outbound_international_distance_mi": 4312.042479908151
+    },
+    {
+      "month": "2025-03",
+      "total_departures": 6765,
+      "domestic_departures": 5433,
+      "outbound_international_departures": 1332,
+      "international_share": 0.1969,
+      "avg_domestic_distance_mi": 1576.148720780416,
+      "avg_outbound_international_distance_mi": 4376.171921921922
+    },
+    {
+      "month": "2025-04",
+      "total_departures": 7052,
+      "domestic_departures": 5835,
+      "outbound_international_departures": 1217,
+      "international_share": 0.1726,
+      "avg_domestic_distance_mi": 1454.614053127678,
+      "avg_outbound_international_distance_mi": 4374.894001643385
+    },
+    {
+      "month": "2025-05",
+      "total_departures": 7352,
+      "domestic_departures": 6271,
+      "outbound_international_departures": 1081,
+      "international_share": 0.147,
+      "avg_domestic_distance_mi": 1376.375697655876,
+      "avg_outbound_international_distance_mi": 4275.27012025902
+    },
+    {
+      "month": "2025-06",
+      "total_departures": 8418,
+      "domestic_departures": 7299,
+      "outbound_international_departures": 1119,
+      "international_share": 0.1329,
+      "avg_domestic_distance_mi": 1397.270996026853,
+      "avg_outbound_international_distance_mi": 4261.699731903485
+    },
+    {
+      "month": "2025-07",
+      "total_departures": 8551,
+      "domestic_departures": 7322,
+      "outbound_international_departures": 1229,
+      "international_share": 0.1437,
+      "avg_domestic_distance_mi": 1458.034826550123,
+      "avg_outbound_international_distance_mi": 4262.206672091131
+    },
+    {
+      "month": "2025-08",
+      "total_departures": 8562,
+      "domestic_departures": 7318,
+      "outbound_international_departures": 1244,
+      "international_share": 0.1453,
+      "avg_domestic_distance_mi": 1441.770155780268,
+      "avg_outbound_international_distance_mi": 4283.373794212219
+    },
+    {
+      "month": "2025-09",
+      "total_departures": 7651,
+      "domestic_departures": 6497,
+      "outbound_international_departures": 1154,
+      "international_share": 0.1508,
+      "avg_domestic_distance_mi": 1418.368785593351,
+      "avg_outbound_international_distance_mi": 4307.48266897747
+    },
+    {
+      "month": "2025-10",
+      "total_departures": 7304,
+      "domestic_departures": 6088,
+      "outbound_international_departures": 1216,
+      "international_share": 0.1665,
+      "avg_domestic_distance_mi": 1468.018561103811,
+      "avg_outbound_international_distance_mi": 4404.027138157895
+    },
+    {
+      "month": "2025-11",
+      "total_departures": 6929,
+      "domestic_departures": 5676,
+      "outbound_international_departures": 1253,
+      "international_share": 0.1808,
+      "avg_domestic_distance_mi": 1567.817477096547,
+      "avg_outbound_international_distance_mi": 4340.818036711891
+    },
+    {
+      "month": "2025-12",
+      "total_departures": 6872,
+      "domestic_departures": 5692,
+      "outbound_international_departures": 1180,
+      "international_share": 0.1717,
+      "avg_domestic_distance_mi": 1553.536893886156,
+      "avg_outbound_international_distance_mi": 4319.95593220339
+    },
+    {
+      "month": "2026-01",
+      "total_departures": 6494,
+      "domestic_departures": 5443,
+      "outbound_international_departures": 1051,
+      "international_share": 0.1618,
+      "avg_domestic_distance_mi": 1466.687672239574,
+      "avg_outbound_international_distance_mi": 4318.687916270219
+    },
+    {
+      "month": "2026-02",
+      "total_departures": 5859,
+      "domestic_departures": 4975,
+      "outbound_international_departures": 884,
+      "international_share": 0.1509,
+      "avg_domestic_distance_mi": 1384.790150753769,
+      "avg_outbound_international_distance_mi": 4338.289592760181
+    },
+    {
+      "month": "2026-03",
+      "total_departures": 6969,
+      "domestic_departures": 5865,
+      "outbound_international_departures": 1104,
+      "international_share": 0.1584,
+      "avg_domestic_distance_mi": 1437.809036658142,
+      "avg_outbound_international_distance_mi": 4371.592391304348
+    },
+    {
+      "month": "2026-04",
+      "total_departures": 5412,
+      "domestic_departures": 4600,
+      "outbound_international_departures": 812,
+      "international_share": 0.15,
+      "avg_domestic_distance_mi": 1569.239347826087,
+      "avg_outbound_international_distance_mi": 4431.758620689655
+    }
+  ]
+}

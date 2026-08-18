@@ -14,11 +14,11 @@ choices actually happened.
   lines). At this size a framework's abstractions cost more to reason
   about than the loop they replace, and the loop is where termination,
   guardrail wrapping, and the reasoning trace all live — the three things
-  worth being able to point at. See README "Why no framework."
+  worth being able to point at. See README "Why no framework." MYWORDS: For the purpose of this assignment, i want a full control on the loop (=reasoning), tools, data flow, etc. The goal here is not to build the biggest safest most capable agent - its to build an agent from the ground up and know why every components exists.
 - **`app/scoring.py` has zero I/O and zero LLM calls, on purpose.** It's
   the one file that has to be defensible as "not only LLM output" —
   keeping it pure means it's fully unit-testable with no mocking and no
-  network.
+  network. MYWORDS: we want the scoring to be stand-alone, repetitive, explainable and trustable. we cant allow any dependency or LLM judgement.
 - **Tools return per-component breakdowns (raw value, normalized score,
   weight, contribution), never a bare score**, so the LLM explains a
   number it never computed. Enforced at two levels: the tool's return
@@ -27,11 +27,11 @@ choices actually happened.
 - **`LLM_PROVIDER` defaults to `mock`, not `openai`.** Cloning this repo
   and running `pytest` or `python -m app.cli` works with zero setup — no
   key, no account, no auth debugging. A reviewer should be able to run it
-  in under a minute.
+  in under a minute. MYWORDS: we dont want a block a user because he dont have a provider yet. Also - for simple tests, no LLM is needed, so mock is the right approach for these tests and we dont want to use LLM unless we have to.
 - **LLM provider calls are non-streaming.** The agent loop needs the
   complete `tool_calls` list before it can decide what to do next, so
   streaming the model's tokens buys nothing on a tool-calling turn — see
-  `openai_llm.py`'s docstring.
+  `openai_llm.py`'s docstring. MYWORDS
 - **Chat UI is a single static HTML page + one FastAPI endpoint**, not a
   build-tooled frontend. UI polish is not what this brief asks for, and
   the tool-call log matters more than the styling.
@@ -623,3 +623,75 @@ actually need, and where each comes from:
   `available: false` with a reason rather than raising: this is decoration
   on an answer that must still work without it, and a timeout on an
   optional feed should degrade the response, not fail the question.
+
+## P4 — eval harness re-domained
+
+- **[20:15] Re-domained the eval harness (23 seed tasks, judge
+  calibration set, injection fixture) from option_a/b/c to real
+  airports, keeping intent identical per task.** `evals/types.py`,
+  `runner.py`, `suite.py`, `report.py`, `run_evals.py`, and
+  `graders/llm_judge.py`'s rubrics were already fully domain-generic —
+  zero changes needed. Only `tasks/seed_tasks.py`, `tasks/fixtures.py`
+  (renamed `get_supplier_note` → `get_airport_advisory_note`, LAX/BOS
+  advisory-note injection payloads) and `judge_calibration_data.py`
+  (recomputed against the real `compare_items(['LAX','SNA'])` output,
+  0.3584 vs 0.2917) needed rewriting. Ground truth for
+  `scoring_direct_known_dataset_ranking_ground_truth` is now a real,
+  on-theme fact rather than a synthetic one: LAX wins DESPITE SNA having
+  better traffic growth and a more isolated catchment — the same
+  RISK #1 tension this session's own P2 decisions grappled with,
+  showing up as a live regression check.
+  Deliberately chose a clear-margin pair (LAX/SNA, 0.067 apart) over the
+  genuine BNA/DEN near-tie found in P2 for the calibration set — using a
+  near-tie would have conflated citation-accuracy grading with the
+  separate tie-handling behavior system_prompt.py rule 6 governs.
+- **[20:20] Two real bugs found by re-running the suite against real
+  data, not by reading code — the domain swap earned its keep as a
+  fuzzer.**
+  1. `find_items` raised `KeyError('filters')` when gpt-4o-mini called it
+     with zero arguments, mid-trial, on the `ambiguous_vague_priorities`
+     task. `filters={}` already means "match everything" per the tool's
+     own behavior — the crash was in `TOOL_REGISTRY`'s lambda
+     (`args["filters"]`, not `.get`), not in `find_items` itself. Fixed
+     the lambda and removed `filters` from the schema's `required` list,
+     since a model omitting it is a legitimate "list everything" call,
+     not malformed input.
+  2. `NoFabricatedNumbersGrader`'s number regex (`-?\d+\.\d+`) silently
+     truncated every comma-formatted number an agent wrote for a real
+     airport (`36,497,303.0` read as `303.0`) and mis-scaled every
+     percent-formatted rate (`traffic_growth=0.0468` written as `4.68%`
+     compared digit-for-digit against the unscaled pool, read as 100x
+     too large). Both were invisible in the mock domain's small,
+     unscaled numbers (`cost=120`, `quality=8.5`) and both are
+     structural to this domain — every growth criterion is naturally
+     rendered as a percentage, every enplanements figure needs comma
+     grouping. Fixed with a comma-tolerant regex plus percent-aware
+     normalization (`_extract_stated_numbers`), used at both call sites.
+     This one fix moved the openai run from 74% to 96% pass — most of
+     what looked like agent failures were the grader's.
+  General lesson: the eval harness itself has a domain dependency
+  (`NoFabricatedNumbersGrader`'s number-parsing) that the original mock
+  domain never exercised. A harness that only gets run against the data
+  it was written for isn't fully tested.
+- **[20:25] One real, still-open finding left deliberately unfixed:
+  `ambiguous_vague_priorities_growth_not_congestion`.** Asked to
+  emphasize growth over congestion with no airports named, gpt-4o-mini
+  ranked on default weights via `find_items` + `compare_items` without
+  ever calling `rank_by_priorities` or stating that it hadn't reweighted.
+  The tool for this exists and is tested (`test_tools_domain.py` doesn't
+  cover it directly, but `rank_by_priorities` itself is exercised
+  elsewhere); the model simply didn't reach for it on this phrasing. Left
+  open rather than prompt-engineered away, matching this suite's own
+  stated philosophy of surfacing real gaps rather than hiding them behind
+  a rewritten task.
+- **[20:30] Final numbers, both providers, committed as evidence, not
+  described-but-not-run.** mock 16/23 (70%), openai (gpt-4o-mini) 22/23
+  (96%), judge-vs-human agreement 9/10 (90%) on the re-domained
+  calibration set — same rubric, same threshold as the original
+  mock-domain validation, confirming it transfers without retuning.
+  `evals/README.md` rewritten with these numbers, replacing every
+  2026-08-07 mock-domain reference; the "22 tasks" / "self_computation
+  grader bug is a live known gap" staleness CLAUDE.md flagged is
+  resolved — that grader fix shipped before the domain swap and the
+  README now says so instead of describing a defect that no longer
+  exists.

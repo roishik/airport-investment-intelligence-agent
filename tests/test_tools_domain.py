@@ -376,3 +376,15 @@ def test_known_category_still_aggregates_normally():
     result = aggregate_records("ANC", "share", "international")
     assert result["unknown_category"] is False
     assert 0.0 < result["value"] < 1.0
+
+
+def test_find_items_via_registry_with_no_arguments_does_not_crash():
+    """filters={} is a meaningful call ('match everything', per
+    find_items' own docstring), not malformed input. Found live in P4
+    evals: gpt-4o-mini called find_items with no arguments at all and got
+    a raw KeyError('filters') logged as a tool error, wasting a turn on a
+    request that was clearly asking for the whole dataset."""
+    from app.tools import TOOL_REGISTRY
+
+    result = TOOL_REGISTRY["find_items"]({})
+    assert result["match_count"] == len(dataset.AIRPORTS)

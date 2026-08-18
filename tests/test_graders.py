@@ -131,3 +131,17 @@ def test_politely_phrased_fabrication_is_still_a_failure():
     )
     assert result.score == 0.0
     assert result.passed is False
+
+
+def test_extract_stated_numbers_handles_commas_and_percent():
+    """Two grader gaps found live in P4, both invisible in the old mock
+    domain: comma-formatted large numbers (36,497,303.0 -> was read as
+    303.0) and percent-formatted rates (traffic_growth 0.0468 written as
+    '4.68%', which the grader used to compare digit-for-digit against
+    the un-scaled pool and flag as a fabricated 100x-too-large number)."""
+    from evals.graders.deterministic import _extract_stated_numbers
+
+    out = _extract_stated_numbers(
+        "SFO scores 9,124,325.75 with traffic growth of 4.68% and a plain 0.3584 total."
+    )
+    assert out == pytest.approx([9124325.75, 0.0468, 0.3584])

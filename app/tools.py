@@ -236,7 +236,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                         "additionalProperties": {"type": "string"},
                     }
                 },
-                "required": ["filters"],
+                "required": [],
             },
         },
     },
@@ -1226,7 +1226,12 @@ TOOL_REGISTRY: dict[str, Callable[[dict[str, Any]], Any]] = {
     "compare_items": lambda args: compare_items(item_ids=args["item_ids"]),
     "get_item_metrics": lambda args: get_item_metrics(item_id=args["item_id"]),
     "resolve_entity": lambda args: resolve_entity(query=args["query"]),
-    "find_items": lambda args: find_items(filters=args["filters"]),
+    # args.get, not args[...]: filters={} is a MEANINGFUL call ("match
+    # everything", see find_items' own docstring), not malformed input —
+    # found live in P4 evals when gpt-4o-mini called find_items with no
+    # arguments and got a raw KeyError('filters') logged as a tool error
+    # instead of the empty-filter result it clearly intended.
+    "find_items": lambda args: find_items(filters=args.get("filters") or {}),
     "aggregate_records": lambda args: aggregate_records(
         item_id=args["item_id"], operation=args["operation"], category=args.get("category")
     ),

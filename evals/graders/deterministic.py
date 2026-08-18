@@ -19,7 +19,36 @@ from typing import Any, Callable
 
 from evals.types import GradeResult, Grader, Outcome, Task
 
-_DECIMAL_RE = re.compile(r"-?\d+\.\d+")
+# Matches "9,124,325.75" as one number, not just the "325.75" tail, and
+# captures a trailing "%" separately — both found live in P4
+# (2026-08-18) on real airport data, neither visible in the scaffold's
+# mock domain (cost=120, quality=8.5 never needed thousands separators
+# or ever appeared as a rate):
+#   1. no comma group -> silently truncated every comma-formatted number
+#      an agent wrote for a large airport (36,497,303.0 read as 303.0).
+#   2. no percent handling -> a growth-rate criterion's raw fraction
+#      (traffic_growth=0.0468) is naturally written as "4.68%", which is
+#      a faithful, MORE readable rendering, not a fabrication — but
+#      compared digit-for-digit against the pool it looks like a made-up
+#      number 100x too large.
+# _extract_stated_numbers() below normalizes both away; the comma groups
+# are optional so plain decimals like "0.3584" still match unchanged.
+_DECIMAL_RE = re.compile(r"-?\d{1,3}(?:,\d{3})*\.\d+(%)?")
+
+
+def _extract_stated_numbers(text: str) -> list[float]:
+    """Every decimal number stated in `text`, normalized to the same
+    scale a tool result would use: a percent-suffixed number is divided
+    by 100, since every rate/growth criterion in this domain is stored
+    and returned as a raw fraction (0.0468), never as a pre-scaled
+    percentage (4.68)."""
+    out = []
+    for match in _DECIMAL_RE.finditer(text):
+        value = float(match.group(0).rstrip("%").replace(",", ""))
+        if match.group(1):  # trailing "%" captured
+            value /= 100.0
+        out.append(value)
+    return out
 
 # Phrasings that indicate the agent asked the user to narrow an
 # underspecified request, rather than guessing. Deterministic and
@@ -190,7 +219,7 @@ class ScoringMatchesGroundTruthGrader(Grader):
             # score-shaped decimals in the final text, (b) leaves none and
             # asks a question. Deliberately conservative — if numbers were
             # stated, it's a failure regardless of how politely phrased.
-            stated_numbers = [float(m) for m in _DECIMAL_RE.findall(outcome.trace.final_text)]
+            stated_numbers = _extract_stated_numbers(outcome.trace.final_text)
             if stated_numbers:
                 return GradeResult(
                     self.name,
@@ -265,7 +294,7 @@ class NoFabricatedNumbersGrader(Grader):
         self.tolerance = tolerance
 
     def grade(self, task: Task, outcome: Outcome) -> GradeResult:
-        text_numbers = [float(m) for m in _DECIMAL_RE.findall(outcome.trace.final_text)]
+        text_numbers = _extract_stated_numbers(outcome.trace.final_text)
         if not text_numbers:
             return GradeResult(self.name, 1.0, True, "no decimal numbers stated in the final answer — nothing to fabricate.")
         pool = outcome.numbers_in_tool_outputs

@@ -200,13 +200,87 @@ h1 {
 .msg.agent .role { color: var(--amber); }
 .msg.agent .role::before { content: "◆"; font-size: 0.75em; }
 .msg .content {
-  white-space: pre-wrap;
   font-size: 0.92rem;
   line-height: 1.55;
   color: var(--ink);
   padding-left: 0.05rem;
 }
 .msg.user .content { color: #cfd8e6; }
+
+/* ── Rendered markdown inside agent replies ─────────────────────────────
+   The agent answers in markdown because that is what a chat-tuned model
+   emits; these rules give that markup the same two-typeface split the
+   rest of the panel uses — sans for the prose, mono for anything that is
+   a number, an identifier, or a table cell. Scoped to .msg.agent so a
+   user's own text is never re-interpreted as markup. */
+.msg.user .content { white-space: pre-wrap; }
+.msg.agent .content > *:first-child { margin-top: 0; }
+.msg.agent .content > *:last-child { margin-bottom: 0; }
+.msg.agent .content p { margin: 0 0 0.65rem; }
+.msg.agent .content h1,
+.msg.agent .content h2,
+.msg.agent .content h3,
+.msg.agent .content h4,
+.msg.agent .content h5,
+.msg.agent .content h6 {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin: 1rem 0 0.4rem;
+}
+.msg.agent .content ul,
+.msg.agent .content ol { margin: 0 0 0.65rem; padding-left: 1.25rem; }
+.msg.agent .content li { margin-bottom: 0.2rem; }
+.msg.agent .content li::marker { color: var(--ink-faint); }
+.msg.agent .content strong { color: #f6f1e6; font-weight: 600; }
+.msg.agent .content em { font-style: italic; color: var(--ink-dim); }
+.msg.agent .content a { color: var(--amber); text-underline-offset: 2px; }
+.msg.agent .content code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--bg-grid);
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  padding: 0.05rem 0.3rem;
+}
+.msg.agent .content pre {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.7rem;
+  background: var(--bg-grid);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+.msg.agent .content pre code { background: none; border: none; padding: 0; font-size: 0.78rem; line-height: 1.5; }
+.msg.agent .content blockquote {
+  margin: 0 0 0.65rem;
+  padding-left: 0.7rem;
+  border-left: 2px solid var(--amber-dim);
+  color: var(--ink-dim);
+}
+.msg.agent .content hr { border: none; border-top: 1px solid var(--line); margin: 0.85rem 0; }
+.msg.agent .content table {
+  border-collapse: collapse;
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.msg.agent .content th,
+.msg.agent .content td { border: 1px solid var(--line); padding: 0.3rem 0.55rem; text-align: left; vertical-align: top; }
+.msg.agent .content th {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 600;
+  white-space: nowrap;
+}
 
 /* ── Tool-call log — the "flight recorder" ticker, the signature device.
    Numbered because call order genuinely IS the reasoning trace, not
@@ -349,6 +423,7 @@ button:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
   <button id="reset" title="Clear conversation history">Reset</button>
 </div>
 
+<script src="/static/markdown.js"></script>
 <script>
 const chatEl = document.getElementById('chat');
 const chatEmptyEl = document.getElementById('chat-empty');
@@ -428,11 +503,7 @@ function startRecognition() {
 function speak(text) {
   if (!voiceRepliesOn || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel(); // a new reply pre-empts one still being read, never queues behind it
-  window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
-}
-
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  window.speechSynthesis.speak(new SpeechSynthesisUtterance(stripMarkdown(text)));
 }
 
 // Cheap, dependency-free JSON syntax coloring: escape first (this text
@@ -450,7 +521,13 @@ function addMessage(role, text) {
   const div = document.createElement('div');
   div.className = 'msg ' + role;
   div.innerHTML = `<div class="role">${role}</div><div class="content"></div>`;
-  div.querySelector('.content').textContent = text;
+  const content = div.querySelector('.content');
+  // Only the agent's own replies are treated as markdown. The user's text
+  // goes in via textContent — re-interpreting what they typed as markup
+  // would be both wrong (they typed prose) and the one place a genuine
+  // XSS sink could open up.
+  if (role === 'agent') content.innerHTML = renderMarkdown(text);
+  else content.textContent = text;
   chatEl.appendChild(div);
   chatEl.scrollTop = chatEl.scrollHeight;
 }

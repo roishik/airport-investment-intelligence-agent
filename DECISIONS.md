@@ -913,3 +913,42 @@ actually need, and where each comes from:
   (no console errors, `startRecognition` intact) on the live `LLM_PROVIDER=mock` server; real
   mic-timing feel isn't something a headless browser can verify — that's Roi's own mic, same
   limitation as the original voice build.
+
+## Markdown in the chat panel
+
+- **The agent was writing markdown and the UI was showing it raw.** The model replies with headers,
+  bold, bullet lists and the occasional comparison table, because that is what a chat-tuned model
+  emits and nothing in the system prompt tells it otherwise. `static/index.html` was putting that
+  string into the DOM with `textContent`, so a reader saw literal `**` and `|` characters instead of
+  a table. Two ways to fix it: load `marked.js` from a CDN, or write the subset by hand. Went with by
+  hand. The CDN version costs the property that the whole UI is served from this repo with no build
+  step and no third-party request at page load, and it would have been the only external dependency
+  in a project whose entire pitch is that you can read every line that produces a number.
+- **The renderer escapes first, once, and everything else runs on already-escaped text.** That
+  ordering is the security property, not an implementation detail. By the time any markdown
+  transform runs, every `<` and `>` in the source is already an entity, so the only real tags in the
+  output are the ones the renderer itself wrote — there is no path by which reply text becomes live
+  markup. The one exception is a link href, which is an attacker-controlled value landing inside an
+  attribute, so schemes are allowlisted to http/https/mailto; a `javascript:` href survives HTML
+  escaping perfectly well and would otherwise have been the one real hole. Rejected links are left
+  visible as literal markdown rather than deleted — refusing to make something clickable is not a
+  reason to hide it from the reader.
+- **Worth being clear about who the threat is.** It is not the model deciding to attack the page.
+  It is that tool results get quoted back into replies, and those results come from public data
+  files this repo does not control — an airport name field is attacker-controllable in exactly the
+  same sense any third-party string is. The guardrail layer already treats tool output as untrusted
+  data on the way into the model; this is the same rule applied on the way out to the browser.
+- **User messages are not run through the renderer.** They go in as `textContent`. The user typed
+  prose, not markdown, so rendering it would be wrong on its own terms — and it is the one input
+  that is genuinely user-controlled, so it is the one place a real XSS sink could open up.
+- **Split into `static/markdown.js` so it could be tested, and it is.**
+  `tests/test_markdown_renderer.py` runs the shipped file — not a copy — under `node` and asserts
+  the invariant directly: for hostile input, the set of tags in the output must be a subset of the
+  tags the renderer is allowed to emit. Adding npm and a JS test runner to a four-package Python
+  project to cover ~90 lines would have cost more than it returns, so the tests skip cleanly when
+  `node` is absent. That keeps the rule that `pytest` is green on a bare clone with zero setup, the
+  same rule `app/config.py` follows for API keys. 212 tests pass, up from 190.
+- **Spoken replies get the markdown stripped, not rendered.** `stripMarkdown()` exists because a
+  synthesizer reads `**` as nothing useful and a table read aloud pipe-by-pipe is worse than saying
+  nothing. Fenced code blocks are dropped outright for the same reason: reading raw tool JSON aloud
+  is not an answer.

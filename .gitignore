@@ -6,6 +6,9 @@
 # Working notes, plan, and prep material — not part of the submission
 _working/
 
+# Local editor/tooling scratch
+.claude/
+
 # Python
 .venv/
 __pycache__/

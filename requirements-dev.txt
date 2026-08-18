@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8.0
+# Data ingestion only (data/refresh_data.py reads FAA's published .xlsx
+# releases). NOT needed to run the agent — the app reads derived JSON.
+openpyxl>=3.1

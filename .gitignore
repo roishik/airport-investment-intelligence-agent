@@ -1,0 +1,16 @@
+# Secrets — never commit a real key
+.env
+.env.*
+!.env.example
+
+# Working notes, plan, and prep material — not part of the submission
+_working/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS
+.DS_Store

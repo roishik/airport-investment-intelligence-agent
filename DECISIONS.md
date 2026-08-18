@@ -74,8 +74,8 @@ actually need, and where each comes from:
 
 1. **Started**: 27 curated airports (16 "core" tied to the brief's four
    regions + 8 "context" hubs), OpenFlights `routes.dat` (community
-   data, last touched ~2014) for ANC's route list. Built during scaffold
-   prep, before the real assignment's data was live. See [14:25]–[14:30].
+   data, last touched ~2014) for ANC's route list, used as a placeholder
+   before the real per-route data below was located. See [14:25]–[14:30].
 2. **Changed** (this session, [14:53]): expanded to the full 515-airport
    FAA commercial-service universe. Roi's call — the brief's four
    questions are illustrative examples, not the full intended scope; a
@@ -845,3 +845,20 @@ actually need, and where each comes from:
   language, both written in P6 before this existed — a stale "no voice"
   claim in either would have been an easy, avoidable question to get
   caught on.
+
+- **[23:17] Agent refused to state its own scoring weights when asked directly — added `list_criteria()`, a no-arg tool.**
+  Manually testing the live agent, asking "what are the weights your algorithm is based on?" got "I'm unable to disclose the exact weights distribution... proprietary." Nothing in the code says that — grepped
+  system_prompt.py and guardrails.py for "proprietary"/"confidential", zero hits, and tools.py's own
+  comment on capacity_pressure already says its weight is "disclosed rather than hidden." The weights
+  (25/25/20/15/15, DEFAULT_CRITERIA) were real and static, just never placed in front of the model as
+  text: compare_items only returns them per-item, gated behind item_ids, so a pure methodology
+  question ("what ARE your weights") had no tool to route to. With NEVER_COMPUTE_RULE telling it not
+  to state ungrounded numbers, the model fell back to a generic corporate-assistant reflex instead.
+  Fix is a tool, not a system-prompt paragraph: `list_criteria()` returns the same
+  name/weight/description shape compare_items already exposes, just without requiring items to
+  compare, so the number stays traceable to a tool call the same way every other number in this
+  agent is. System prompt rule 4a now routes "how is the score calculated" questions to it explicitly
+  and states the weights are disclosed by design. 4 new tests in test_tools_domain.py (weights match
+  DEFAULT_CRITERIA, percentages sum to 100, every criterion has a description, registry dispatch with
+  {}); 190 passed. Verified against the live server on real gpt-4o-mini with the exact original
+  prompt — it now calls list_criteria and states 25/25/20/15/15 instead of refusing.

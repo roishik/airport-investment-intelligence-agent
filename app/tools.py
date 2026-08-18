@@ -86,6 +86,32 @@ DEFAULT_CRITERIA: list[Criterion] = [
     Criterion(name="absolute_scale", weight=15, lower_bound=564368.0, upper_bound=26519646.05),
 ]
 
+# Plain-language gloss for each criterion, condensed from the comments
+# above. Kept as a separate dict rather than a field on Criterion because
+# scoring.py's docstring requires that dataclass shape to stay identical
+# across reps — this is domain text, not scoring logic.
+CRITERION_DESCRIPTIONS: dict[str, str] = {
+    "traffic_growth": "Year-over-year passenger traffic growth (FAA CY2024->CY2025 change).",
+    "regional_demand_growth": (
+        "Growth of the population and economic activity in the airport's home region "
+        "(Census county population CAGR, 2022->2025) — the only demand-side signal, and "
+        "the one that decorrelates the ranking from raw airport size."
+    ),
+    "catchment_monopoly": (
+        "Distance to the nearest commercial-service competitor airport, in miles — how "
+        "much local demand could otherwise escape to a rival airport."
+    ),
+    "capacity_pressure": (
+        "Passengers per air-carrier runway, a congestion proxy. Correlates with "
+        "absolute_scale (r=0.89), so held to a smaller weight on purpose."
+    ),
+    "absolute_scale": (
+        "Current passenger volume — the size of the prize. Deliberately the "
+        "joint-smallest weight: being large today is not evidence that expanding "
+        "returns anything."
+    ),
+}
+
 
 class UnknownItemError(KeyError):
     pass
@@ -172,6 +198,27 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "type": "object",
                 "properties": {"item_id": {"type": "string"}},
                 "required": ["item_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_criteria",
+            "description": (
+                "Return the scoring methodology itself: every criterion this agent "
+                "ranks airports on, its weight, and what it measures. Call this for "
+                "any meta-question about HOW the ranking works — 'what criteria/weights "
+                "do you use', 'how is the score calculated', 'what goes into the "
+                "ranking' — never answer that from memory or call it proprietary. "
+                "This is distinct from compare_items, which needs specific airports to "
+                "rank; list_criteria takes none because it describes the method, not a "
+                "result. Takes no arguments."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
             },
         },
     },
@@ -557,6 +604,36 @@ def compare_items(
 
 def get_item_metrics(item_id: str) -> dict[str, Any]:
     return {"item_id": item_id, "metrics": fetch_item_metrics(item_id)}
+
+
+def list_criteria() -> dict[str, Any]:
+    """The scoring methodology itself: every criterion this agent ranks
+    on, its weight, and what it measures. Takes no item_ids because it
+    isn't a ranking — it exists so a meta-question ('what are your
+    criteria/weights', 'how is the score calculated') has a tool to route
+    to, instead of the model either reaching for compare_items (which
+    needs items to compare and won't answer a question with none) or
+    answering from its own training-data reflex about scoring algorithms
+    being proprietary. These weights are static config, not a computed
+    score, so returning them is not a NEVER_COMPUTE_RULE violation."""
+    total = sum(c.weight for c in DEFAULT_CRITERIA)
+    return {
+        "criteria": [
+            {
+                "name": c.name,
+                "weight": c.weight,
+                "weight_pct_of_total": round(100 * c.weight / total, 1),
+                "higher_is_better": c.higher_is_better,
+                "description": CRITERION_DESCRIPTIONS.get(c.name, ""),
+            }
+            for c in DEFAULT_CRITERIA
+        ],
+        "note": (
+            "These are the default weights, applied unless the user's own stated "
+            "priorities lead you to call rank_by_priorities instead — that "
+            "reweights per-query, it does not change these defaults."
+        ),
+    }
 
 
 def resolve_entity(query: str) -> dict[str, Any]:
@@ -1225,6 +1302,7 @@ TOOL_REGISTRY: dict[str, Callable[[dict[str, Any]], Any]] = {
     "get_live_airport_status": lambda args: get_live_airport_status(item_id=args["item_id"]),
     "compare_items": lambda args: compare_items(item_ids=args["item_ids"]),
     "get_item_metrics": lambda args: get_item_metrics(item_id=args["item_id"]),
+    "list_criteria": lambda _: list_criteria(),
     "resolve_entity": lambda args: resolve_entity(query=args["query"]),
     # args.get, not args[...]: filters={} is a MEANINGFUL call ("match
     # everything", see find_items' own docstring), not malformed input —

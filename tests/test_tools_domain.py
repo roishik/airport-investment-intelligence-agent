@@ -29,6 +29,7 @@ from app.tools import (
     PRACTICAL_CAPACITY_PER_ARRIVAL_STREAM,
     compare_items,
     estimate_unmet_demand,
+    list_criteria,
 )
 
 # SFO's 28L/28R, from OurAirports' published runway-end coordinates. The
@@ -289,6 +290,34 @@ def test_criteria_names_match_the_dataset_fields():
     into missing_criteria for every item and never be noticed."""
     supplied = {k for m in dataset.METRICS.values() for k in m}
     assert {c.name for c in DEFAULT_CRITERIA} <= supplied
+
+
+def test_list_criteria_exposes_every_default_weight_with_no_item_ids():
+    """The whole point of the tool: a meta-question about the methodology
+    must be answerable without any airport to compare. If this table ever
+    drifts from DEFAULT_CRITERIA, the 'proprietary weights' failure mode
+    is one incomplete tool result away from recurring."""
+    result = list_criteria()
+    returned = {c["name"]: c["weight"] for c in result["criteria"]}
+    assert returned == {c.name: c.weight for c in DEFAULT_CRITERIA}
+
+
+def test_list_criteria_percentages_sum_to_100():
+    result = list_criteria()
+    assert sum(c["weight_pct_of_total"] for c in result["criteria"]) == pytest.approx(100.0)
+
+
+def test_list_criteria_every_entry_has_a_description():
+    result = list_criteria()
+    for c in result["criteria"]:
+        assert c["description"], c["name"]
+
+
+def test_list_criteria_via_registry_takes_no_arguments():
+    from app.tools import TOOL_REGISTRY
+
+    result = TOOL_REGISTRY["list_criteria"]({})
+    assert {c["name"] for c in result["criteria"]} == {c.name for c in DEFAULT_CRITERIA}
 
 
 def test_lax_does_not_win_the_default_ranking():

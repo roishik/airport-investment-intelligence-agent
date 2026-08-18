@@ -84,8 +84,17 @@ def _tool_log_rows(entries) -> list[dict]:
 
 
 @app.post("/chat")
-async def chat(req: ChatRequest) -> dict:
+def chat(req: ChatRequest) -> dict:
+    # Deliberately `def`, not `async def`. run_agent is fully synchronous
+    # and blocks on the network for as long as the whole agent turn takes
+    # — the reason /chat/stream runs it on a worker thread. Declared
+    # `async`, it ran that blocking loop directly on the event loop, and
+    # one /chat request froze every other request in the process:
+    # measured, a /health issued 0.3s into a 2.0s /chat took 1.71s. A
+    # plain `def` handler is dispatched to Starlette's threadpool, which
+    # is the same fix with less machinery.
     provider = get_llm_provider()
+    generation = conversation.generation()
     try:
         result = run_agent(
             user_message=req.message,
@@ -115,7 +124,7 @@ async def chat(req: ChatRequest) -> dict:
             "turns_used": exc.turns_used,
         }
 
-    conversation.replace(result.messages[1:])  # drop system message; run_agent re-adds it each call
+    conversation.replace(result.messages[1:], since=generation)  # drop system msg; run_agent re-adds it
     return {
         "reply": result.final_text,
         "tool_log": _tool_log_rows(result.tool_log),
@@ -174,6 +183,13 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
     # streaming. Same single-session scope limitation as /chat — see the
     # module docstring — just made explicit here instead of implicit.
     history_snapshot = conversation.snapshot()
+    # Tag the turn with the history generation it started from. If the
+    # user hits Reset while this stream is still running, the generation
+    # moves and the write below is dropped — otherwise /reset returns
+    # {"status": "reset"}, the conversation looks cleared, and then the
+    # in-flight turn silently puts the whole transcript back. One user,
+    # one click, fully deterministic; not a multi-user scope issue.
+    generation = conversation.generation()
     q: "queue.Queue[_StreamEvent]" = queue.Queue()
     threading.Thread(
         target=_run_agent_in_thread, args=(req.message, history_snapshot, provider, q), daemon=True
@@ -194,7 +210,7 @@ async def chat_stream(req: ChatRequest) -> StreamingResponse:
                 )
             elif event.kind == "done":
                 result: AgentResult = event.payload
-                conversation.replace(result.messages[1:])
+                conversation.replace(result.messages[1:], since=generation)
                 yield _sse("done", {"reply": result.final_text, "incomplete": False, "turns_used": result.turns_used})
                 return
             elif event.kind == "max_turns":

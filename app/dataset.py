@@ -94,6 +94,14 @@ def _metrics(airport: dict[str, Any]) -> dict[str, float]:
 # ── Categorical attributes: what you FILTER on, never what you score on ──
 # Kept in a separate dict from the metrics above on purpose. Mixing them
 # is how a categorical value ends up normalized as if it were a KPI.
+def _weather_constrained(airport: dict) -> str:
+    """"yes" / "no" / "unknown" -- see the call site for why the third
+    value exists. Unmeasurable is not the same as unconstrained."""
+    if not airport.get("runway_geometry_complete"):
+        return "unknown"
+    return "yes" if (airport.get("weather_capacity_degradation") or 0) > 0 else "no"
+
+
 def _attributes(airport: dict[str, Any]) -> dict[str, str]:
     state = state_of(airport)
     return {
@@ -105,7 +113,18 @@ def _attributes(airport: dict[str, Any]) -> dict[str, str]:
         # Whether the airport loses arrival capacity in low visibility --
         # a categorical read on the runway geometry, so "which congested
         # airports are weather-constrained" is a filter, not an essay.
-        "weather_constrained": "yes" if (airport.get("weather_capacity_degradation") or 0) > 0 else "no",
+        #
+        # THREE values, not two, and that is the point. 23 airports have
+        # incomplete runway geometry (missing coordinates, or no runway
+        # long enough for air-carrier arrivals), so nothing was measured
+        # for them. Collapsing that into "no" reports an absence of
+        # measurement as a measurement of absence — and three of the 23
+        # are ranking-eligible, one of them currently 3rd nationally. A
+        # user asking "which top-ranked airports are NOT weather
+        # constrained" would get it back as an affirmative finding.
+        # `runway_geometry_complete` is already in the data; it just was
+        # not being read.
+        "weather_constrained": _weather_constrained(airport),
         "ranking_eligible": "yes" if airport.get("faa_hub_class") in ELIGIBLE_HUB_CLASSES else "no",
     }
 

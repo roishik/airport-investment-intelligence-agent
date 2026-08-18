@@ -44,6 +44,11 @@ _INJECTION_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"act as (if you (are|were)|an?) (an? )?(unfiltered|unrestricted|jailbroken)", re.I),
     re.compile(r"new instructions?\s*:", re.I),
     re.compile(r"</?(system|assistant)[ >]", re.I),  # fake role-tag injection
+    # This module's OWN fence. Fake role tags were anticipated above and
+    # the tag we actually rely on was the one missed — an untrusted string
+    # containing our closing delimiter is trying to end the quarantine
+    # early and be read as developer text.
+    re.compile(r"</?untrusted_data", re.I),
     re.compile(r"do anything now", re.I),
     re.compile(r"pretend (you are|to be) (an? )?(ai )?(with no|without) (restrictions|rules|guardrails)", re.I),
 ]
@@ -80,7 +85,25 @@ def wrap_untrusted(text: str, source: str) -> str:
     header = f'<untrusted_data source="{source}">'
     if scan.flagged:
         header += f"\n<!-- guardrail: flagged patterns {list(scan.matched_patterns)} -->"
+    # Neutralize any copy of the fence inside the payload BEFORE fencing.
+    # Otherwise the wrapper's own closing tag can appear in the middle of
+    # the quarantined text, and everything after it reads as if the
+    # quarantine had ended. The source is not hypothetical: airport names
+    # come from a community-editable public dataset, and `compare_items`
+    # puts them verbatim into its `ineligible` list.
+    #
+    # A zero-width space inside the tag, rather than deleting the text:
+    # the reader still sees exactly what the data said, which is the same
+    # visibility-over-filtering principle as flagging rather than dropping.
+    # Scanning happens first, so the attempt is still reported.
+    text = _defuse_fence(text)
     return f"{header}\n{text}\n{UNTRUSTED_CLOSE}"
+
+
+def _defuse_fence(text: str) -> str:
+    """Break any literal `untrusted_data` tag in a payload so it cannot
+    terminate the fence that is about to be wrapped around it."""
+    return re.sub(r"<(/?)(untrusted_data)", "<\u200b\\1\\2", text, flags=re.I)
 
 
 def unwrap_untrusted(wrapped: str) -> str:

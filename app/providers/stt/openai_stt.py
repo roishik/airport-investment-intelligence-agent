@@ -22,12 +22,15 @@ transcriber gets slightly wrong.
 """
 from __future__ import annotations
 
+import logging
 import time
 
 import httpx
 
 from app.config import OPENAI_API_KEY, OPENAI_STT_FALLBACK_MODEL, OPENAI_STT_MODEL
 from app.providers.stt.base import TranscriptResult
+
+logger = logging.getLogger("stt")
 
 _TRANSCRIBE_URL = "https://api.openai.com/v1/audio/transcriptions"
 
@@ -76,7 +79,21 @@ class OpenAISTTProvider:
         model_used = self.model
         try:
             text = await self._call(self.model, audio, filename, content_type)
-        except httpx.HTTPStatusError:
+        except httpx.HTTPStatusError as exc:
+            # Only for "this account cannot use that model". Catching every
+            # HTTP error here re-uploaded the whole utterance on a 401 or a
+            # 429 — doubling latency and cost exactly when the API is
+            # already refusing, and hiding the reason, since the only trace
+            # was the model name in the response. A 401 will fail the same
+            # way twice; a 429 wants backoff, not an immediate retry.
+            if exc.response.status_code not in (400, 403, 404):
+                raise
+            logger.info(
+                "STT model %s unavailable (HTTP %s); retrying with %s",
+                self.model,
+                exc.response.status_code,
+                self.fallback_model,
+            )
             model_used = self.fallback_model
             text = await self._call(self.fallback_model, audio, filename, content_type)
         latency_ms = (time.perf_counter() - started) * 1000.0

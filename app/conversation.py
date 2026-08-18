@@ -21,6 +21,18 @@ from typing import Any
 # here would double it.
 _history: list[dict[str, Any]] = []
 
+# Bumped on every write and every clear. A turn takes seconds and the user
+# can press Reset in the middle of one, so a write has to be able to ask
+# "is the conversation I started from still the current one?" — see
+# `replace(since=...)`.
+_generation = 0
+
+
+def generation() -> int:
+    """The current history generation. Callers snapshot this alongside
+    the history and hand it back when they write."""
+    return _generation
+
 
 def snapshot() -> list[dict[str, Any]]:
     """A copy, not the live list. A streaming request must not observe
@@ -28,12 +40,27 @@ def snapshot() -> list[dict[str, Any]]:
     return list(_history)
 
 
-def replace(messages: list[dict[str, Any]]) -> None:
+def replace(messages: list[dict[str, Any]], *, since: int | None = None) -> bool:
+    """Store a completed turn, unless the conversation moved underneath it.
+
+    `since` is the generation the caller snapshotted before starting. If
+    it no longer matches, the user reset (or another turn landed) while
+    this one was in flight, and writing now would resurrect a
+    conversation they were told was gone. Returns whether the write
+    happened.
+    """
+    global _generation
+    if since is not None and since != _generation:
+        return False
     _history[:] = messages
+    _generation += 1
+    return True
 
 
 def clear() -> None:
+    global _generation
     _history.clear()
+    _generation += 1
 
 
 def truncate_last_reply(spoken_prefix: str) -> bool:
@@ -58,15 +85,50 @@ def truncate_last_reply(spoken_prefix: str) -> bool:
     An empty `spoken_prefix` means the user interrupted before any audio
     played at all, so the reply is removed outright rather than stored as
     an empty assistant turn.
+
+    THE PREFIX MUST ACTUALLY BE A PREFIX, and that check is a correctness
+    boundary rather than paranoia. Without it this function will write
+    whatever string it is handed into the assistant's own turn, and the
+    model then treats it as something it previously said. That is the
+    cheapest possible defeat of this project's central claim — one HTTP
+    request and the agent "remembers" stating a score no code computed.
+    Barge-in only ever needs to REMOVE text, so refusing anything that is
+    not a leading substring of the stored reply costs nothing and makes
+    the operation structurally incapable of adding a fact.
     """
+    # Only the MOST RECENT assistant turn is a candidate. Scanning further
+    # back would mean that a turn which ended with an empty reply causes
+    # the PREVIOUS answer to be truncated instead — rewriting a turn the
+    # user is not talking over.
     for i in range(len(_history) - 1, -1, -1):
         message = _history[i]
-        if message.get("role") != "assistant" or not message.get("content"):
+        if message.get("role") != "assistant":
             continue
+        if not message.get("content"):
+            # The newest assistant message is a tool-call turn or an empty
+            # reply: there is nothing the user could have heard. Stop
+            # rather than reaching past it.
+            return False
+        stored = str(message["content"])
         prefix = spoken_prefix.strip()
+        if prefix and not _is_spoken_prefix_of(prefix, stored):
+            return False
         if prefix:
             _history[i] = {**message, "content": prefix}
         else:
             del _history[i]
         return True
     return False
+
+
+def _is_spoken_prefix_of(prefix: str, stored: str) -> bool:
+    """Whether `prefix` is the opening of `stored`, ignoring whitespace.
+
+    Compared with whitespace collapsed because the client sends back the
+    chunks it actually played, which have been through markdown stripping
+    and re-joining — so the spacing legitimately differs from the stored
+    markdown even when the words are identical. Everything else must
+    match exactly, and it must match from the start.
+    """
+    normalize = lambda text: " ".join(text.split())
+    return normalize(stored).startswith(normalize(prefix))

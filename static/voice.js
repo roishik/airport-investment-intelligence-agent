@@ -232,6 +232,17 @@ class VoiceConversation {
     this.on = handlers; // { onState, onLevel, onTranscript, onError, onSpokenPrefix, needsReply }
     this.state = 'idle';
 
+    // Incremented by start() and by stop(). Every await in this class
+    // captures it first and bails if it moved, because "the user left
+    // voice mode" can happen at any of them and the work in flight has to
+    // notice. Checking `state === 'idle'` instead is not enough: the
+    // paths out of an await call setState themselves, so the first one to
+    // run overwrites the idle that stop() just set and every later check
+    // sees a live state. That is not hypothetical — ending voice mode
+    // during transcription used to inject the transcript into the chat,
+    // run a real billed agent turn, and surface a null-deref to the user.
+    this.sessionId = 0;
+
     this.stream = null;
     this.captureCtx = null;
     this.sourceNode = null;
@@ -257,12 +268,36 @@ class VoiceConversation {
   }
 
   async start() {
+    const session = ++this.sessionId;
+
     // getUserMedia must be called from a user gesture, and so must
     // AudioContext creation — both happen on the button click that calls
     // this. echoCancellation is what makes an open mic viable next to a
     // speaker; see the file header.
-    this.stream = await navigator.mediaDevices.getUserMedia({
+    const stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+
+    // The permission prompt can sit open for as long as the user likes,
+    // and "End voice" is reachable the whole time. Without this check the
+    // microphone opens after the user has already left, with nothing
+    // holding a reference to close it — a recording indicator that stays
+    // lit and cannot be turned off.
+    if (session !== this.sessionId) {
+      stream.getTracks().forEach(t => t.stop());
+      return;
+    }
+    this.stream = stream;
+
+    // A device disappearing (unplugged USB mic, revoked permission) is
+    // otherwise invisible: the panel keeps saying "Listening" at a dead
+    // input forever.
+    stream.getTracks().forEach(track => {
+      track.addEventListener('ended', () => {
+        if (session !== this.sessionId) return;
+        this.on.onError?.('The microphone was disconnected.');
+        this.stop();
+      });
     });
 
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -297,6 +332,7 @@ class VoiceConversation {
   }
 
   stop() {
+    this.sessionId++;
     this.speechEpoch++;
     this._stopPlayback();
     this.processorNode?.disconnect();
@@ -410,6 +446,7 @@ class VoiceConversation {
       return;
     }
 
+    const session = this.sessionId;
     this.setState('transcribing');
     const merged = new Float32Array(totalSamples);
     let offset = 0;
@@ -429,10 +466,12 @@ class VoiceConversation {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || `HTTP ${res.status}`);
       transcript = ((await res.json()).text || '').trim();
     } catch (err) {
-      this.on.onError?.(`Could not transcribe: ${err.message}`);
+      if (session !== this.sessionId) return; // left voice mode; not the user's problem
+      this.on.onError?.('Could not transcribe that — the speech service did not respond.');
       this.setState('listening');
       return;
     }
+    if (session !== this.sessionId) return; // left voice mode while transcribing
 
     // Transcribers emit something for almost any sound. A turn with no
     // letters in it was noise, and sending it to the agent would produce
@@ -448,9 +487,10 @@ class VoiceConversation {
     try {
       reply = await this.on.needsReply?.(transcript);
     } catch (err) {
-      this.on.onError?.(`Agent error: ${err.message}`);
+      if (session !== this.sessionId) return;
+      this.on.onError?.('The agent could not answer that one.');
     }
-    if (this.state === 'idle') return; // user left voice mode mid-turn
+    if (session !== this.sessionId) return; // left voice mode mid-turn
     if (reply) await this.speak(reply);
     else this.setState('listening');
   }
@@ -476,6 +516,7 @@ class VoiceConversation {
     }
 
     const epoch = ++this.speechEpoch;
+    const session = this.sessionId;
     this.spokenChunks = [];
     this.setState('speaking');
 
@@ -508,7 +549,7 @@ class VoiceConversation {
       topUp();
       for (let i = 0; i < chunks.length; i++) {
         const buffer = await inFlight.shift();
-        if (epoch !== this.speechEpoch) return; // interrupted while fetching
+        if (epoch !== this.speechEpoch || session !== this.sessionId) return; // interrupted or left
         topUp();
         await this._playBuffer(buffer, epoch);
         if (epoch !== this.speechEpoch) return; // interrupted while playing
@@ -517,10 +558,12 @@ class VoiceConversation {
         this.spokenChunks.push(chunks[i]);
       }
     } catch (err) {
-      if (epoch === this.speechEpoch) this.on.onError?.(`Could not speak: ${err.message}`);
+      if (epoch === this.speechEpoch && session === this.sessionId) {
+        this.on.onError?.('Could not play the spoken reply — it is still on screen above.');
+      }
     }
 
-    if (epoch === this.speechEpoch) this.setState('listening');
+    if (epoch === this.speechEpoch && session === this.sessionId) this.setState('listening');
   }
 
   _playBuffer(buffer, epoch) {

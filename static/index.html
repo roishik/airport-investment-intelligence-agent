@@ -40,7 +40,12 @@
   --hairline-strong: #D9D6E3;
   --ink: #0F172A;
   --ink-soft: #4A5568;
-  --ink-faint: #94A3B8;
+  /* #64748B, not #94A3B8. The lighter value measured 2.56:1 on white —
+     below AA's 4.5:1 for text and below even the 3:1 required for icon
+     glyphs — and it is the colour on placeholders, role labels, empty
+     states, table headers, and the composer icons. This one is 5.09:1
+     and clears every one of those at once. */
+  --ink-faint: #64748B;
 
   /* Dark containers / code viewports */
   --slate-900: #0F172A;
@@ -49,7 +54,7 @@
   --dark-hairline: #24334C;
   --on-dark: #E8EDF6;
   --on-dark-soft: #97A6BF;
-  --on-dark-faint: #64748B;
+  --on-dark-faint: #94A3B8;  /* was #64748B: 3.75:1 on the charcoal panel, below AA */
 
   /* Accent */
   --violet: #7C3AED;
@@ -349,7 +354,7 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
   margin-bottom: 0.45rem;
 }
 
-.msg .content { font-size: 0.93rem; line-height: 1.62; color: var(--ink); }
+.msg .content { font-size: 0.93rem; line-height: 1.62; color: var(--ink); overflow-wrap: break-word; }
 
 /* The user's own turn is a deep charcoal container, right-aligned: the
    one place on this light canvas where the dark surface means "this came
@@ -705,7 +710,7 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
     <h1>Airport Investment Intelligence</h1>
     <p class="tagline">Ask about expansion candidates, congestion, or unmet demand. Every score is computed by code you can read — the model only explains it.</p>
     <div class="status-row">
-      <div id="status" class="chip">loading</div>
+      <div id="status" class="chip" role="status" aria-live="polite">loading</div>
       <button id="voice-toggle" class="chip" type="button" aria-pressed="false" title="Read the agent's replies aloud using your browser's own speech synthesis">Voice replies · off</button>
       <span id="voice-mode-chip" class="chip"><span class="orb live" aria-hidden="true"></span><span id="voice-mode-label">voice conversation</span></span>
     </div>
@@ -717,7 +722,7 @@ button.chip:disabled { opacity: 0.45; cursor: not-allowed; }
         <span class="card-title">Conversation</span>
         <span id="step-tag" class="step-tag" role="status" aria-live="polite" hidden></span>
       </div>
-      <div id="chat" class="card-body">
+      <div id="chat" class="card-body" role="log" aria-live="polite" aria-relevant="additions">
         <div id="chat-empty" class="empty-state">Ask about an airport, a region, or a head-to-head comparison. <span class="k">Compare LAX and SNA congestion levels.</span></div>
       </div>
     </section>
@@ -776,6 +781,7 @@ const statusEl = document.getElementById('status');
 const liveDotEl = document.getElementById('live-dot');
 const stepTagEl = document.getElementById('step-tag');
 const micBtn = document.getElementById('mic');
+const sendBtn = document.getElementById('send');
 const voiceToggleBtn = document.getElementById('voice-toggle');
 
 // ── Voice, browser-native only: SpeechRecognition (mic in) and
@@ -933,8 +939,17 @@ async function loadHealth() {
 // fetch chunk boundary can land in the middle of one — so this buffers
 // across reads and only parses complete "\n\n"-terminated blocks,
 // leaving any trailing partial block in the buffer for the next chunk.
+// One turn at a time. Without this, a double-tap of Enter starts two
+// /chat/stream requests; both snapshot the same history, and whichever
+// finishes second overwrites the first, so one of the two questions
+// disappears from the conversation entirely. The interleaved tool log is
+// the visible symptom, the lost turn is the real one.
+let turnInFlight = false;
+
 async function runTurn(text) {
-  if (!text) return null;
+  if (!text || turnInFlight) return null;
+  turnInFlight = true;
+  sendBtn.disabled = true;
   addMessage('user', text);
   let reply = null;
   setStatus('thinking');
@@ -985,6 +1000,8 @@ async function runTurn(text) {
     addMessage('agent', '(error contacting backend — see console)');
     console.error(e);
   } finally {
+    turnInFlight = false;
+    sendBtn.disabled = false;
     liveDotEl.classList.remove('on');
     setStep(null);
     loadHealth();
@@ -994,12 +1011,16 @@ async function runTurn(text) {
 
 function send() {
   const text = inputEl.value.trim();
-  if (!text) return;
+  // Check before clearing: a second Enter while a turn is running must
+  // leave what the user typed in the box, not swallow it. runTurn would
+  // reject it anyway, and losing their sentence is a worse outcome than
+  // making them press Enter again.
+  if (!text || turnInFlight) return;
   inputEl.value = '';
   runTurn(text);
 }
 
-document.getElementById('send').addEventListener('click', send);
+sendBtn.addEventListener('click', send);
 inputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
 micBtn.addEventListener('click', () => {
   if (recognizing) recognition.stop();
@@ -1080,11 +1101,25 @@ function setVoiceLevel(dbfs) {
 function markLastReplyInterrupted(spokenPrefix) {
   if (!lastAgentMessageEl) return;
   const content = lastAgentMessageEl.querySelector('.content');
-  if (!content) return;
-  content.innerHTML = spokenPrefix.trim() ? renderMarkdown(spokenPrefix) : '';
+  if (!content || content.querySelector('.interrupted-note')) return;
+  // The rendered reply is left exactly as it is, and only a note is
+  // added. Two earlier attempts at "redraw it to match what was heard"
+  // were both worse than the problem: re-rendering the spoken prefix
+  // flattened tables and lists into prose (the prefix is stripped TTS
+  // text, not markdown), and an empty prefix — the user talking over the
+  // agent before the first audio arrived, which is a ~2 second window on
+  // every reply — erased an answer that was fully on screen and
+  // unrecoverable.
+  //
+  // The server-side transcript IS still truncated: the model will not
+  // claim to have said what nobody heard. This note is what keeps the
+  // screen honest about the difference, rather than deleting the text a
+  // reader can plainly see.
   const note = document.createElement('div');
   note.className = 'interrupted-note';
-  note.textContent = spokenPrefix.trim() ? 'interrupted here' : 'interrupted before it spoke';
+  note.textContent = spokenPrefix.trim()
+    ? 'you interrupted here — the rest was not read aloud'
+    : 'you interrupted before this was read aloud';
   content.appendChild(note);
 }
 
@@ -1113,6 +1148,11 @@ async function startVoiceMode() {
 
   composerEl.classList.add('voice-active');
   voiceModeChip.classList.add('on');
+  // The button that was just clicked is now display:none, which drops
+  // focus to <body> and silently sends a keyboard user back to the top of
+  // the document. stopVoiceMode already returns focus to the input; this
+  // is the same courtesy on the way in.
+  voiceEndBtn.focus();
   try {
     await voiceConversation.start();
   } catch (err) {

@@ -56,7 +56,7 @@ from app.scoring import (
 #
 # So the two genuinely forward-looking signals carry 50% between them,
 # and the two size-flavoured ones 30%, with absolute_scale alone held to
-# 15%. Sanity check that this works: LAX ranks 67th of 144, not 1st.
+# 15%. Sanity check that this works: LAX ranks 69th of 144, not 1st.
 #
 # Bounds are the 5th/95th percentile of the ELIGIBLE set, measured
 # 2026-08-18 and frozen as constants rather than recomputed per query —
@@ -174,7 +174,34 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                             "code, e.g. ['LAX', 'SNA']. Use resolve_entity or "
                             "find_items to obtain these; do not type them from memory."
                         ),
-                    }
+                    },
+                    "focus_criterion": {
+                        "type": "string",
+                        "enum": [
+                            "traffic_growth",
+                            "regional_demand_growth",
+                            "catchment_monopoly",
+                            "capacity_pressure",
+                            "absolute_scale",
+                        ],
+                        "description": (
+                            "OMIT THIS BY DEFAULT. Any question about which airports are "
+                            "strong/best/promising candidates, about expansion, about "
+                            "investment, or any general ranking must leave it unset and "
+                            "use the full weighted score. Set it ONLY when the user "
+                            "explicitly names a single measurable dimension and asks to "
+                            "compare on that dimension. 'Compare their congestion levels' -> "
+                            "capacity_pressure. 'Which is growing faster' -> "
+                            "traffic_growth. 'Which is bigger' -> absolute_scale. "
+                            "'Which region is growing' -> regional_demand_growth. "
+                            "'Which has less competition nearby' -> catchment_monopoly. "
+                            "The response then carries a 'focus' block ranking the "
+                            "airports on that criterion alone, with the leader already "
+                            "identified — report that block. Do NOT answer a "
+                            "single-dimension question from total_score: it blends all "
+                            "five criteria and means something different."
+                        ),
+                    },
                 },
                 "required": ["item_ids"],
             },
@@ -277,7 +304,9 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                             "'hub_class': 'L'}. Available keys include: state "
                             "(2-letter), region (Census region), new_england "
                             "(yes/no), hub_class (L/M/S/N/None), municipality, "
-                            "weather_constrained (yes/no), ranking_eligible "
+                            "weather_constrained (yes/no/unknown -- 'unknown' means the "
+                            "runway geometry could not be measured, NOT that the "
+                            "airport is unconstrained), ranking_eligible "
                             "(yes/no). Matching is case-insensitive."
                         ),
                         "additionalProperties": {"type": "string"},
@@ -493,11 +522,139 @@ def _tie_group(ranked: list[dict[str, Any]]) -> list[str]:
     return tied if len(tied) > 1 else []
 
 
+def _gate_ids(
+    item_ids: list[str], *, include_ineligible: bool = False
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """Split requested ids into (rankable, set-aside-with-a-reason).
+
+    The FAA hub-class gate exists because percentage growth on a
+    near-zero base is not an investment signal. The concrete failure:
+    asked for New England candidates, New Bedford Regional — 3,145
+    passengers a year, +52.7% — came back ranked 4th, ahead of airports
+    a thousand times its size.
+
+    This lives in one function called by EVERY ranking tool, and that is
+    the whole point. It was originally written inline inside
+    `compare_items`, on the argument that "a filter the caller has to
+    remember is a filter that gets forgotten" — and then three sibling
+    ranking tools were added that did not call it, and each one
+    reproduced the exact failure the gate was written to prevent. The
+    argument was right; it just had not been applied to itself.
+
+    Set-aside airports are RETURNED with a reason, never silently
+    dropped: the user asked about them and is owed an explanation for
+    their absence.
+    """
+    if include_ineligible:
+        return list(item_ids), []
+
+    eligible_ids = set(dataset.ELIGIBLE_IDS)
+    kept: list[str] = []
+    ineligible: list[dict[str, Any]] = []
+    for item_id in item_ids:
+        # An unknown id passes through rather than being reported as
+        # ineligible — "not in the dataset" is a different answer from
+        # "too small to rank", and the downstream lookup raises a proper
+        # unknown-airport error for it.
+        if item_id in eligible_ids or item_id not in dataset.AIRPORTS:
+            kept.append(item_id)
+            continue
+        airport = dataset.AIRPORTS[item_id]
+        ineligible.append(
+            {
+                "item_id": item_id,
+                "name": airport.get("name"),
+                "faa_hub_class": airport.get("faa_hub_class"),
+                "enplanements": airport.get("enplanements_cy2025_prelim"),
+                "reason": (
+                    "Below FAA primary-airport hub class (L/M/S). Percentage growth on a "
+                    "base this small is not a meaningful investment signal, so it is "
+                    "excluded from ranking rather than allowed to top it."
+                ),
+            }
+        )
+    return kept, ineligible
+
+
+def _focus_on_criterion(
+    criterion_name: str, ranking: list[dict[str, Any]], criteria: list[Criterion]
+) -> dict[str, Any]:
+    """Re-rank an already-computed ranking on ONE criterion.
+
+    Pure presentation of numbers already computed — it re-reads the
+    per-component breakdown `rank_items` produced and orders by that one
+    component. No new arithmetic, nothing recomputed, so it cannot
+    disagree with the main ranking.
+
+    Ordering is by raw_value descending, not by normalized_score, and the
+    distinction matters for a criterion where lower is better: "which is
+    MORE congested" is a question about the raw quantity, not about which
+    airport scores better on it. `higher_is_better` is returned alongside
+    so the reader knows which direction is favourable for investment,
+    which is a separate question from which value is larger.
+    """
+    match = next((c for c in criteria if c.name == criterion_name), None)
+    if match is None:
+        # A bad criterion name is the caller's error and must not be
+        # silently ignored — an unnoticed typo here would mean the model
+        # quietly falls back to describing the composite, which is the
+        # exact failure this parameter exists to prevent.
+        return {
+            "criterion": criterion_name,
+            "error": (
+                f"Unknown criterion {criterion_name!r}. Valid criteria: "
+                f"{', '.join(c.name for c in criteria)}. Call list_criteria for what each means."
+            ),
+        }
+
+    rows = []
+    for entry in ranking:
+        component = next((c for c in entry["components"] if c["criterion"] == criterion_name), None)
+        if component is None or component["raw_value"] is None:
+            # Missing rather than zero. A dropped criterion is renormalized
+            # away in the composite; here it has to be said out loud,
+            # because "no data" and "the lowest value" are different
+            # answers to "which is more congested".
+            rows.append({"item_id": entry["item_id"], "raw_value": None, "normalized_score": None})
+            continue
+        rows.append(
+            {
+                "item_id": entry["item_id"],
+                "raw_value": component["raw_value"],
+                "normalized_score": component["normalized_score"],
+            }
+        )
+
+    with_values = sorted(
+        [r for r in rows if r["raw_value"] is not None], key=lambda r: r["raw_value"], reverse=True
+    )
+    for position, row in enumerate(with_values, start=1):
+        row["rank_on_criterion"] = position
+    missing = [r["item_id"] for r in rows if r["raw_value"] is None]
+
+    return {
+        "criterion": criterion_name,
+        "description": CRITERION_DESCRIPTIONS.get(criterion_name, ""),
+        "weight_in_total_score": match.weight,
+        "higher_is_better_for_investment": match.higher_is_better,
+        "ranked_by_this_criterion_alone": with_values,
+        "highest": with_values[0]["item_id"] if with_values else None,
+        "lowest": with_values[-1]["item_id"] if with_values else None,
+        "no_data_for": missing,
+        "note": (
+            f"This ordering is on {criterion_name} alone. It is NOT the total expansion score, "
+            f"which blends all {len(criteria)} criteria and answers a different question. Report "
+            f"this ordering, and do not describe total_score as a measure of {criterion_name}."
+        ),
+    }
+
+
 def compare_items(
     item_ids: list[str],
     criteria: list[Criterion] | None = None,
     coverage_threshold: float = 0.5,
     include_ineligible: bool = False,
+    focus_criterion: str | None = None,
 ) -> dict[str, Any]:
     """Rank the given airports on the deterministic criteria.
 
@@ -516,32 +673,27 @@ def compare_items(
     asked about them and deserves to be told why they are not in the list.
     `include_ineligible=True` overrides it for a caller who genuinely
     wants the long tail.
+
+    `focus_criterion` exists because of one specific, observed failure.
+    Asked "compare LA and Santa Ana congestion levels" — a question about
+    ONE dimension, not about which airport is the better investment — the
+    model read the composite `total_score` and reported "LAX has the
+    higher total score, therefore LAX is more congested." Both halves of
+    that sentence are true and the conclusion is false: `total_score` is a
+    weighted blend of five criteria, only one of which is the congestion
+    proxy. Two rounds of system-prompt instruction did not stop it.
+
+    The fix is the same principle the rest of this file runs on: if the
+    model keeps deriving a wrong answer, stop asking it to derive one.
+    With `focus_criterion` set, the tool returns a `focus` block that
+    ranks the items on that criterion ALONE, already ordered, with the
+    leader named. The model reports it instead of inferring it — the same
+    reason every other tool here returns a per-component breakdown rather
+    than a bare number.
     """
     criteria = criteria or DEFAULT_CRITERIA
 
-    ineligible: list[dict[str, Any]] = []
-    if not include_ineligible:
-        eligible_ids = set(dataset.ELIGIBLE_IDS)
-        kept = []
-        for item_id in item_ids:
-            if item_id in eligible_ids or item_id not in dataset.AIRPORTS:
-                kept.append(item_id)
-                continue
-            airport = dataset.AIRPORTS[item_id]
-            ineligible.append(
-                {
-                    "item_id": item_id,
-                    "name": airport.get("name"),
-                    "faa_hub_class": airport.get("faa_hub_class"),
-                    "enplanements": airport.get("enplanements_cy2025_prelim"),
-                    "reason": (
-                        "Below FAA primary-airport hub class (L/M/S). Percentage growth on a "
-                        "base this small is not a meaningful investment signal, so it is "
-                        "excluded from ranking rather than allowed to top it."
-                    ),
-                }
-            )
-        item_ids = kept
+    item_ids, ineligible = _gate_ids(item_ids, include_ineligible=include_ineligible)
 
     items = {item_id: fetch_item_metrics(item_id) for item_id in item_ids}
     result = rank_items(items, criteria, coverage_threshold=coverage_threshold)
@@ -566,6 +718,13 @@ def compare_items(
         for r in result.ranked
     ]
     tied = _tie_group(ranking)
+    # `decisive` answers "is there a clear winner". With nothing ranked
+    # there is no winner at all, and `not tied` would report true —
+    # reachable on a real question ("compare these three small regionals"),
+    # where every airport is correctly gated out and the payload then
+    # asserts confidence in a list that does not exist.
+    decisive = bool(ranking) and not tied
+    focus = _focus_on_criterion(focus_criterion, ranking, criteria) if focus_criterion else None
     return {
         "criteria": [
             {"name": c.name, "weight": c.weight, "higher_is_better": c.higher_is_better}
@@ -578,7 +737,11 @@ def compare_items(
         # judgement that produced it, so calling #1 a winner would claim a
         # precision the method does not have.
         "tied_at_top": tied,
-        "decisive": not tied,
+        "decisive": decisive,
+        # An affirmative signal rather than an absent one: the model
+        # should say "none of these could be ranked, here is why" instead
+        # of reading an empty list as agreement.
+        "no_items_ranked": not ranking,
         "tie_threshold": DECISIVE_SCORE_GAP,
         # Airports the caller asked about that are below FAA primary-airport
         # hub class. Returned, not silently dropped — tell the user these
@@ -599,6 +762,11 @@ def compare_items(
             }
             for e in result.excluded
         ],
+        # Present only when the caller asked about one dimension. See the
+        # docstring: this is the answer to "who is more congested",
+        # computed here so the model never has to derive it from the
+        # composite score, which does not mean that.
+        "focus": focus,
     }
 
 
@@ -762,6 +930,36 @@ def aggregate_records(item_id: str, operation: str, category: str | None = None)
                 "category and answer the question — do not stop to ask the user which category "
                 "they want when the semantics already say which one applies. Then state plainly "
                 "that the figure is a proxy and what its limitation is."
+            ),
+        }
+
+    # A share needs something to take a share OF. With no category the
+    # arithmetic is matching_units / total_units over the SAME set, which
+    # is 1.0 — a confident, fully "defined" 100%.
+    #
+    # This is not hypothetical: the schema tells the model to call this
+    # tool with no category first, to discover what the categories are.
+    # Asked "what percentage of flights out of Anchorage are long haul",
+    # the model follows that instruction, receives value 1.0 with
+    # defined:true and unknown_category:false, and has everything it needs
+    # to answer "100%". Same failure class as the unknown-category guard
+    # above, on the path the tool's own documentation routes through.
+    if operation == "share" and category is None:
+        return {
+            "item_id": item_id,
+            "operation": operation,
+            "category": None,
+            "value": None,
+            "defined": False,
+            "known_categories": known_categories,
+            "unknown_category": False,
+            "category_semantics": dataset.CATEGORY_SEMANTICS.get(item_id),
+            "guidance": (
+                "A share of everything is 100% by definition, so no value is returned here. "
+                f"This call is for discovery: the categories are {known_categories}. Read "
+                "'category_semantics' to see which one answers the question — including where "
+                "it is a proxy rather than the exact measurement asked for — then call this "
+                "tool again with that category."
             ),
         }
 
@@ -1007,14 +1205,43 @@ def estimate_derived_metric(item_id: str) -> dict[str, Any]:
         raise _unknown_airport(item_id)
 
     airport = dataset.AIRPORTS[item_id]
+
+    # `or 0.0` cannot tell "absent" from "zero", and this model runs on
+    # ragged public data where both occur. 14 of 515 airports have no
+    # county population figure at all (Puerto Rico and the island
+    # territories, where the Census county join has nothing to join to).
+    # For those the tool used to state "county population growth
+    # (+0.00%)" inside the factor explanation — the exact text the system
+    # prompt tells the model to quote when explaining the "why" — with
+    # nothing anywhere in the payload marking it as absent rather than
+    # measured.
+    #
+    # scoring.py already solves this properly for the ranking path, with
+    # missing_criteria, covered_weight, and renormalization over the
+    # weight that is actually present. That discipline exists; this code
+    # path simply did not participate in it. Tracking the gaps here is
+    # that same rule applied where it was missing.
+    missing_inputs: list[str] = []
+
+    def numeric(field: str, label: str, default: float = 0.0) -> float:
+        raw = airport.get(field)
+        if raw is None or raw == "":
+            missing_inputs.append(label)
+            return default
+        return float(raw)
+
     inputs = {
-        "enplanements": float(airport.get("enplanements_cy2025_prelim") or 0.0),
+        "enplanements": numeric("enplanements_cy2025_prelim", "enplanements"),
         "arrival_streams_vmc": int(airport.get("arrival_streams_vmc") or 0),
         "arrival_streams_imc": int(airport.get("arrival_streams_imc") or 0),
-        "weather_capacity_degradation": float(airport.get("weather_capacity_degradation") or 0.0),
+        "weather_capacity_degradation": numeric(
+            "weather_capacity_degradation", "weather_capacity_degradation"
+        ),
         "min_parallel_separation_ft": airport.get("min_parallel_separation_ft"),
-        "traffic_growth": float(airport.get("yoy_pct_change_2025") or 0.0),
-        "regional_demand_growth": float(airport.get("county_population_cagr_recent") or 0.0),
+        "traffic_growth": numeric("yoy_pct_change_2025", "traffic_growth"),
+        "regional_demand_growth": numeric(
+            "county_population_cagr_recent", "regional_demand_growth"
+        ),
     }
     if not inputs["arrival_streams_vmc"]:
         raise UnknownItemError(
@@ -1030,13 +1257,31 @@ def estimate_derived_metric(item_id: str) -> dict[str, Any]:
         traffic_growth=inputs["traffic_growth"],
         regional_demand_growth=inputs["regional_demand_growth"],
     )
+    # A modelled number built partly on absent inputs is not the same
+    # number, and must not be presented as one. Confidence is forced
+    # down, the caveat says which inputs were missing, and the payload
+    # carries the list so the model cannot state the figure without also
+    # having the reason to qualify it.
+    confidence = result.confidence
+    caveat = result.caveat
+    if missing_inputs:
+        confidence = "low"
+        caveat = (
+            f"No data for {', '.join(missing_inputs)} at this airport — treated as zero in the "
+            "model, which understates projected demand. Report this estimate as a lower bound "
+            "built on incomplete inputs, and name the missing ones. "
+        ) + (caveat or "")
+
     return {
         "item_id": item_id,
         "metric": result.metric,
         "value": round(result.value, 4),
         "unit": result.unit,
-        "confidence": result.confidence,
-        "caveat": result.caveat,
+        "confidence": confidence,
+        "caveat": caveat,
+        # Empty for a fully-measured airport. Non-empty means at least one
+        # number in `observed_inputs` is a stand-in, not a measurement.
+        "missing_inputs": missing_inputs,
         "assumptions": list(result.assumptions),
         "observed_inputs": dict(inputs),
         "factors": [
@@ -1067,6 +1312,7 @@ def rank_by_priorities(
     """
     emphasize = emphasize or []
     deemphasize = deemphasize or []
+    item_ids, ineligible = _gate_ids(item_ids)
     items = {item_id: fetch_item_metrics(item_id) for item_id in item_ids}
 
     adjusted_criteria = apply_priority_emphasis(
@@ -1095,8 +1341,23 @@ def rank_by_priorities(
             for r in result.ranked
         ]
 
+    default_rows = as_rows(default_result)
+    adjusted_rows = as_rows(adjusted_result)
     default_top = default_result.ranked[0].item_id if default_result.ranked else None
     adjusted_top = adjusted_result.ranked[0].item_id if adjusted_result.ranked else None
+
+    # Tie detection, for the same reason compare_items has it: two scores
+    # inside DECISIVE_SCORE_GAP are the same score. Without this the tool
+    # reported "your priorities changed the winner" off a 0.0020 gap —
+    # announcing an effect on a difference this file elsewhere calls
+    # noise. A reweighting only changed the winner if the new leader was
+    # outside the old leader's tie band.
+    default_tied = _tie_group(default_rows)
+    adjusted_tied = _tie_group(adjusted_rows)
+    changed_the_winner = bool(
+        default_top and adjusted_top and adjusted_top != default_top
+        and adjusted_top not in default_tied
+    )
 
     return {
         "emphasized": emphasize,
@@ -1104,9 +1365,14 @@ def rank_by_priorities(
         "emphasis_factor": PRIORITY_EMPHASIS_FACTOR,
         "default_weights": {c.name: c.weight for c in DEFAULT_CRITERIA},
         "adjusted_weights": {c.name: c.weight for c in adjusted_criteria},
-        "default_ranking": as_rows(default_result),
-        "adjusted_ranking": as_rows(adjusted_result),
-        "priorities_changed_the_winner": default_top != adjusted_top,
+        "default_ranking": default_rows,
+        "adjusted_ranking": adjusted_rows,
+        # Same eligibility gate every other ranking tool applies, and
+        # returned for the same reason — the user asked about these.
+        "ineligible": ineligible,
+        "default_tied_at_top": default_tied,
+        "adjusted_tied_at_top": adjusted_tied,
+        "priorities_changed_the_winner": changed_the_winner,
         "assumption_to_state": (
             f"Ranked with {', '.join(emphasize) or 'no criteria'} weighted "
             f"{PRIORITY_EMPHASIS_FACTOR}x higher"
@@ -1121,6 +1387,19 @@ def analyze_weight_sensitivity(item_ids: list[str], criterion: str, factor: floa
     """Re-rank with one criterion's weight scaled by `factor`, and report
     what actually moved. Answers "what happens if this weight is wrong?"
     with evidence instead of reassurance."""
+    # A negative factor produces a NEGATIVE weight, which silently breaks
+    # two invariants scoring.py annotates as guaranteed: total_score in
+    # 0..1, and component weights summing to 1. factor=-5 yields
+    # total_score=-2.68 with covered_weight=1.0 — a payload that reads as
+    # fully valid. apply_priority_emphasis already guards this; the guard
+    # simply was never applied to the other entry point.
+    if factor <= 0:
+        raise ValueError(
+            f"factor must be greater than 0 (got {factor}). A zero or negative weight "
+            "multiplier produces scores outside the 0..1 range the scoring contract "
+            "guarantees. Use a value below 1 to reduce a weight and above 1 to raise it."
+        )
+    item_ids, ineligible = _gate_ids(item_ids)
     items = {item_id: fetch_item_metrics(item_id) for item_id in item_ids}
     scaled = scale_criterion_weight(DEFAULT_CRITERIA, criterion, factor)
     overrides = {c.name: c.weight for c in scaled if c.name == criterion}
@@ -1129,6 +1408,7 @@ def analyze_weight_sensitivity(item_ids: list[str], criterion: str, factor: floa
     return {
         "criterion": criterion,
         "factor": factor,
+        "ineligible": ineligible,
         "baseline_weights": dict(result.baseline_weights),
         "perturbed_weights": dict(result.perturbed_weights),
         "top_item": {
@@ -1169,6 +1449,7 @@ def weight_robustness_report(item_ids: list[str]) -> dict[str, Any]:
     This is the tool for "how confident are you in this ranking?" — and
     it can legitimately return "not very", which is the point.
     """
+    item_ids, ineligible = _gate_ids(item_ids)
     items = {item_id: fetch_item_metrics(item_id) for item_id in item_ids}
     baseline = rank_items(items, DEFAULT_CRITERIA)
 
@@ -1181,8 +1462,8 @@ def weight_robustness_report(item_ids: list[str]) -> dict[str, Any]:
                 "current_weight": criterion.weight,
                 "flip_factor": flip,
                 "interpretation": (
-                    f"No weight multiplier up to 10x changes the winner — this criterion's "
-                    f"exact weight is not load-bearing."
+                    "No weight multiplier up to 10x changes the winner — this criterion's "
+                    "exact weight is not load-bearing."
                     if flip is None
                     else f"Scaling this weight by {flip}x changes the top-ranked item. "
                     + (
@@ -1203,6 +1484,11 @@ def weight_robustness_report(item_ids: list[str]) -> dict[str, Any]:
 
     return {
         "baseline_top": baseline.ranked[0].item_id if baseline.ranked else None,
+        # Same gate as every other ranking tool. Without it this report
+        # computed flip factors over a population compare_items would
+        # never rank, so the confidence evidence described a ranking the
+        # user was never shown.
+        "ineligible": ineligible,
         "baseline_ranking": [
             {"rank": r.rank, "item_id": r.item_id, "total_score": round(r.total_score, 4)}
             for r in baseline.ranked
@@ -1263,10 +1549,39 @@ def get_live_airport_status(item_id: str) -> dict[str, Any]:
             "source": NAS_STATUS_URL,
         }
 
-    events: list[dict[str, str]] = []
-    # The feed nests delay types differently per category, so rather than
-    # walking a brittle expected path, find every element carrying an
-    # airport code and keep the ones matching this airport.
+    # ElementTree has no parent pointers, so build the map once. It is
+    # needed because the CATEGORY of an event lives on an ancestor
+    # (<Delay_type><Name>Airport Closures</Name>), not on the node
+    # carrying the airport code.
+    parents = {child: parent for parent in root.iter() for child in parent}
+
+    def category_of(node: ElementTree.Element) -> str:
+        """Nearest labelled ancestor — the FAA's own name for this kind of
+        event."""
+        current = parents.get(node)
+        while current is not None:
+            name = (current.findtext("Name") or "").strip()
+            if name:
+                return name
+            current = parents.get(current)
+        return "Unclassified"
+
+    events: list[dict[str, Any]] = []
+    # The previous version flattened the tree with root.iter() and reported
+    # node.tag as the type, so every event came back as "Delay" or
+    # "Airport" and the feed's own labels were unreachable. It also kept
+    # only <Reason>, discarding <Min>/<Max>/<Trend> on delays and
+    # <Start>/<Reopen> on closures.
+    #
+    # That combination produced confidently wrong statements. A real
+    # example: LAX carries a standing NOTAM reading "LAX AD AP CLSD TO NON
+    # SKED TRANSIENT GA ACFT EXC 24HR PPR", valid for a year. Stripped of
+    # its category and its dates it reads as "LAX AD AP CLSD", and the
+    # agent reported LAX as closed. It is open; it is restricted to
+    # scheduled traffic without prior permission. Meanwhile JFK, with a
+    # genuine 16-30 minute increasing departure delay, returned the least
+    # informative payload of the three, because all of its numbers were in
+    # exactly the sibling elements being dropped.
     for node in root.iter():
         code = ""
         for tag in ("ARPT", "IATA", "Airport"):
@@ -1276,8 +1591,21 @@ def get_live_airport_status(item_id: str) -> dict[str, Any]:
                 break
         if code != item_id:
             continue
-        reason = node.findtext("Reason") or node.findtext("reason") or ""
-        events.append({"type": node.tag, "reason": reason.strip()})
+        # Keep the whole matched subtree. Which fields are present depends
+        # on the event kind, and guessing wrong is how the delay
+        # magnitudes were lost the first time.
+        detail: dict[str, Any] = {}
+        for child in node.iter():
+            if child is node or not (child.text or "").strip():
+                continue
+            key = child.tag
+            if child.attrib:
+                # <Arrival_Departure Type="Departure"> — the attribute is
+                # what says whether "16 minutes" is arrivals or departures,
+                # which is most of the meaning.
+                key = f"{key}[{','.join(child.attrib.values())}]"
+            detail[key] = child.text.strip()
+        events.append({"category": category_of(node), "element": node.tag, "detail": detail})
 
     return {
         "item_id": item_id,
@@ -1292,6 +1620,16 @@ def get_live_airport_status(item_id: str) -> dict[str, Any]:
             "not be described as if it were — a ground delay today is weather or an equipment "
             "outage, not evidence about whether this airport is worth expanding."
         ),
+        # The feed mixes live delay programs with standing NOTAMs that can
+        # run for a year, and a NOTAM's text often begins with something
+        # that reads like "AP CLSD". Report what the fields say, including
+        # the dates, rather than summarizing an event as a closure.
+        "reading_note": (
+            "Each event carries its FAA category and its own fields. Do not paraphrase an "
+            "event as 'the airport is closed' unless a field says so: many entries are "
+            "standing NOTAMs restricting a class of traffic, with validity dates in the "
+            "text, not closures happening now. Quote the category and the relevant fields."
+        ),
     }
 
 
@@ -1300,7 +1638,9 @@ def get_live_airport_status(item_id: str) -> dict[str, Any]:
 # entire "tool registry" a hand-rolled loop needs.
 TOOL_REGISTRY: dict[str, Callable[[dict[str, Any]], Any]] = {
     "get_live_airport_status": lambda args: get_live_airport_status(item_id=args["item_id"]),
-    "compare_items": lambda args: compare_items(item_ids=args["item_ids"]),
+    "compare_items": lambda args: compare_items(
+        item_ids=args["item_ids"], focus_criterion=args.get("focus_criterion")
+    ),
     "get_item_metrics": lambda args: get_item_metrics(item_id=args["item_id"]),
     "list_criteria": lambda _: list_criteria(),
     "resolve_entity": lambda args: resolve_entity(query=args["query"]),

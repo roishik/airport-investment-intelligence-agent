@@ -39,7 +39,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app import conversation
 from app.config import (
@@ -78,8 +78,9 @@ class SpeakRequest(BaseModel):
 class InterruptRequest(BaseModel):
     # Everything the user actually heard before talking over the agent.
     # Empty is meaningful and not an error: it means they interrupted
-    # before any audio played.
-    spoken_prefix: str = ""
+    # before any audio played. Bounded, because it is only ever a prefix
+    # of a reply that was itself bounded by TTS_MAX_CHARS.
+    spoken_prefix: str = Field(default="", max_length=TTS_MAX_CHARS)
 
 
 def _missing_credential() -> str | None:
@@ -149,8 +150,12 @@ async def transcribe(request: Request) -> dict:
 
     from app.providers.stt import get_stt_provider
 
-    provider = get_stt_provider()
     try:
+        # Inside the try, not above it: an unrecognized STT_PROVIDER makes
+        # the factory raise, and _missing_credential has no branch for a
+        # provider it does not know, so the 503 gate above lets it
+        # through. Outside the try that surfaced as an unhandled 500.
+        provider = get_stt_provider()
         result = await provider.transcribe(audio, filename=filename, content_type=content_type)
     except Exception as exc:
         # Never let a provider error reach the browser verbatim: an
@@ -198,8 +203,10 @@ async def speak(req: SpeakRequest) -> Response:
 
     from app.providers.tts import get_tts_provider
 
-    provider = get_tts_provider()
     try:
+        # Inside the try for the same reason as /transcribe — an unknown
+        # TTS_PROVIDER must be a handled error, not a 500.
+        provider = get_tts_provider()
         result = await provider.synthesize(text)
     except Exception as exc:
         logger.warning("synthesis failed: %s", type(exc).__name__)
@@ -234,4 +241,10 @@ async def interrupt(req: InterruptRequest) -> dict:
     about a conversation that did not occur.
     """
     truncated = conversation.truncate_last_reply(req.spoken_prefix)
+    # False covers two different situations and neither is an error: there
+    # was no reply to cut (the user spoke over the thinking pause), or the
+    # text offered was not actually the opening of the stored reply, in
+    # which case it is refused rather than written. See
+    # app/conversation.py — this endpoint can only ever shorten a reply,
+    # never add to one.
     return {"truncated": truncated}

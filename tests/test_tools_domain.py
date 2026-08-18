@@ -417,3 +417,122 @@ def test_find_items_via_registry_with_no_arguments_does_not_crash():
 
     result = TOOL_REGISTRY["find_items"]({})
     assert result["match_count"] == len(dataset.AIRPORTS)
+
+
+# ── focus_criterion: answering a single-dimension question ─────────────
+# Origin, from running the brief's own example question against the real
+# model: asked to "compare LA and Santa Ana congestion levels" the agent
+# read the composite total_score and concluded "LAX has the higher total
+# score, therefore LAX is more congested." Both halves true, conclusion
+# false — total_score blends five criteria and only one of them is the
+# congestion proxy. Two rounds of system-prompt instruction did not stop
+# it, so the answer moved into the tool, where the rest of this file's
+# numbers already live.
+
+
+def test_focus_is_absent_unless_asked_for():
+    """The default must stay the full weighted ranking. This is the
+    regression test for the first attempt at the fix, which made the
+    model apply a single-criterion view to 'which airports are strong
+    candidates for terminal expansion' and rank New England by traffic
+    growth alone — a worse answer than the one being fixed."""
+    from app.tools import compare_items
+
+    assert compare_items(["LAX", "SNA"])["focus"] is None
+
+
+def test_focus_ranks_on_that_criterion_alone_not_on_the_total():
+    from app.tools import compare_items
+
+    result = compare_items(["LAX", "SNA"], focus_criterion="traffic_growth")
+    focus = result["focus"]
+    rows = focus["ranked_by_this_criterion_alone"]
+    # SNA has positive traffic growth and LAX negative, while LAX wins the
+    # composite. If these two orderings ever agree, this test is no longer
+    # checking anything — which is exactly why this pair was chosen.
+    assert [r["item_id"] for r in rows] == ["SNA", "LAX"]
+    assert result["ranking"][0]["item_id"] == "LAX"
+    assert focus["highest"] == "SNA"
+    assert focus["lowest"] == "LAX"
+
+
+def test_focus_numbers_are_the_same_numbers_as_the_main_ranking():
+    """Nothing is recomputed — the focus block re-reads components the
+    scoring pass already produced. If it ever disagreed with the ranking
+    it sits next to, the agent would have two different answers for the
+    same question."""
+    from app.tools import compare_items
+
+    result = compare_items(["LAX", "SNA", "BOS"], focus_criterion="capacity_pressure")
+    from_ranking = {
+        entry["item_id"]: next(
+            c["raw_value"] for c in entry["components"] if c["criterion"] == "capacity_pressure"
+        )
+        for entry in result["ranking"]
+    }
+    from_focus = {r["item_id"]: r["raw_value"] for r in result["focus"]["ranked_by_this_criterion_alone"]}
+    assert from_focus == from_ranking
+
+
+def test_focus_carries_the_warning_not_to_read_it_as_the_total_score():
+    from app.tools import compare_items
+
+    note = compare_items(["LAX", "SNA"], focus_criterion="capacity_pressure")["focus"]["note"]
+    assert "total_score" in note
+    assert "capacity_pressure" in note
+
+
+def test_focus_reports_an_unknown_criterion_instead_of_ignoring_it():
+    """A typo must not degrade quietly into 'no focus block', because the
+    model would then answer from the composite — the exact failure this
+    parameter exists to prevent."""
+    from app.tools import compare_items
+
+    focus = compare_items(["LAX", "SNA"], focus_criterion="congestion")["focus"]
+    assert "error" in focus
+    assert "capacity_pressure" in focus["error"]  # names the valid options
+    assert "ranked_by_this_criterion_alone" not in focus
+
+
+def test_focus_separates_no_data_from_a_low_value():
+    """'No data' and 'the smallest number' are different answers to
+    'which is more congested', and collapsing them would invent a fact."""
+    from app.tools import compare_items
+
+    ranking = [
+        {
+            "item_id": "AAA",
+            "components": [{"criterion": "capacity_pressure", "raw_value": 100.0, "normalized_score": 0.5}],
+        },
+        {"item_id": "BBB", "components": [{"criterion": "capacity_pressure", "raw_value": None, "normalized_score": None}]},
+    ]
+    from app.tools import DEFAULT_CRITERIA, _focus_on_criterion
+
+    focus = _focus_on_criterion("capacity_pressure", ranking, DEFAULT_CRITERIA)
+    assert focus["no_data_for"] == ["BBB"]
+    assert [r["item_id"] for r in focus["ranked_by_this_criterion_alone"]] == ["AAA"]
+    assert focus["lowest"] == "AAA"  # not BBB — BBB has no value at all
+
+
+def test_focus_is_reachable_through_the_registry():
+    """The schema exposes focus_criterion, so the registry dispatch has to
+    forward it — a parameter the model can request and the dispatcher
+    drops is worse than one that does not exist."""
+    from app.tools import TOOL_REGISTRY
+
+    result = TOOL_REGISTRY["compare_items"](
+        {"item_ids": ["LAX", "SNA"], "focus_criterion": "capacity_pressure"}
+    )
+    assert result["focus"]["criterion"] == "capacity_pressure"
+    assert TOOL_REGISTRY["compare_items"]({"item_ids": ["LAX", "SNA"]})["focus"] is None
+
+
+def test_focus_criterion_enum_matches_the_real_criteria():
+    """The schema lists the valid criterion names inline for the model.
+    If a criterion is renamed and the enum is not, the model requests a
+    name the tool rejects."""
+    from app.tools import DEFAULT_CRITERIA, TOOL_SCHEMAS
+
+    schema = next(s for s in TOOL_SCHEMAS if s["function"]["name"] == "compare_items")
+    enum = schema["function"]["parameters"]["properties"]["focus_criterion"]["enum"]
+    assert sorted(enum) == sorted(c.name for c in DEFAULT_CRITERIA)

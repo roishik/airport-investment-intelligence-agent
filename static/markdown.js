@@ -9,7 +9,13 @@
 // escapeHtml() is a global by the time anything else needs it.
 
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // NUL is stripped here so the claim made about CODE_SENTINEL below is
+  // actually true rather than merely asserted. It is not a security
+  // issue — a NUL in the source would collide with a code-span
+  // placeholder and swap one already-escaped fragment for another — but
+  // an invariant that is stated and not enforced is worse than no
+  // invariant, because the next person relies on it.
+  return String(s).replace(/\u0000/g, '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
 // ── Markdown rendering ─────────────────────────────────────────────────
@@ -31,7 +37,8 @@ function escapeHtml(s) {
 // here; tool results quoted back into a reply are, and those originate in
 // public data files this repo does not control.
 const SAFE_URL_SCHEME = /^(?:https?:\/\/|mailto:)/i;
-// NUL, which cannot occur in the escaped source text, so a code span's
+// NUL. escapeHtml strips it from the source, so it cannot occur in the
+// text these placeholders are substituted into and a code span's
 // placeholder can never collide with real content.
 const CODE_SENTINEL = '\u0000';
 const CODE_SENTINEL_RE = new RegExp(CODE_SENTINEL + '(\\d+)' + CODE_SENTINEL, 'g');
@@ -76,12 +83,26 @@ function renderList(rawLines) {
     }
   }
   if (!items.length) return '';
+
+  // Normalize against the shallowest item, not against the first one.
+  // build() stops as soon as it meets an item shallower than the depth it
+  // was called with, and never advances past it — so a list whose first
+  // line is indented ("  - Anchorage / - Juneau") silently dropped every
+  // item from the first outdent onward. In a ranked answer that is an
+  // airport vanishing from the list with no error anywhere.
+  const shallowest = Math.min(...items.map(i => i.depth));
+  for (const item of items) item.depth -= shallowest;
+
   let pos = 0;
   function build(depth) {
     const tag = items[pos].ordered ? 'ol' : 'ul';
     let html = `<${tag}>`;
     while (pos < items.length && items[pos].depth >= depth) {
-      if (items[pos].depth > depth) { html += build(items[pos].depth); continue; } // guard: ragged first item
+      // A deeper item with no sibling above it to hang off — a list whose
+      // first line is indented. Wrap it in an <li> rather than emitting a
+      // bare nested list, which is invalid markup, and never skip it,
+      // which is what silently dropped items before.
+      if (items[pos].depth > depth) { html += `<li>${build(items[pos].depth)}</li>`; continue; }
       const text = renderInline(items[pos].text).replace(/\n/g, '<br>');
       pos++;
       const nested = pos < items.length && items[pos].depth > depth ? build(items[pos].depth) : '';
@@ -89,7 +110,11 @@ function renderList(rawLines) {
     }
     return `${html}</${tag}>`;
   }
-  return build(items[0].depth);
+  // build(0), not build(items[0].depth): depths are normalized above so
+  // the shallowest is 0, and starting at the FIRST item's depth is what
+  // caused the truncation — build() exits at the first item shallower
+  // than the depth it was given.
+  return build(0);
 }
 
 function isTableSeparator(line) {

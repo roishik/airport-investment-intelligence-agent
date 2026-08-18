@@ -423,6 +423,14 @@ def resolve(query: str, catalog: Mapping[str, Sequence[str]], top_k: int = 5) ->
                 distance = _restricted_edit_distance(normalized_query, text.casefold())
                 if distance > MAX_CODE_EDIT_DISTANCE:
                     continue
+                # NOTE: every candidate from this branch carries the same
+                # fixed confidence, so the second test compares a constant
+                # with itself and is never true — this is `best is None` in
+                # effect, i.e. first match per item wins. Left as-is
+                # deliberately: preferring the smaller edit distance instead
+                # changes which alias represents an item, and the surfacing
+                # is correct either way because same-distance codes all tie
+                # at 0.80 and the decisive gate then refuses to pick one.
                 if best is None or _CODE_EDIT_CONFIDENCE > best.confidence:
                     best = EntityCandidate(
                         item_id=item_id,

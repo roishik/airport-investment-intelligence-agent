@@ -772,3 +772,38 @@ actually need, and where each comes from:
   never stops requesting tools) was checked directly against the queue
   rather than through the browser: 6 `tool_call` events followed by one
   `max_turns` event, matching the default `max_turns=6` exactly.
+
+## UI redesign — dependency-free
+
+- **[21:35] Redesigned static/index.html per Roi's call ("really looks
+  bad... more modern but clean"), using the frontend-design skill's
+  process. Single file, zero new dependencies — no CDN fonts, no icon
+  library, no build step — matching this app's existing "no framework"
+  posture rather than fighting it.**
+  Direction: an investment-analyst instrument panel, not a chat-app
+  template — amber-on-charcoal, grounded in real flight-deck/trading-
+  terminal displays (this literally IS an investment-decision tool, so
+  the reference is on-brief, not decorative). Two accents (amber for the
+  agent/live state, desaturated slate-blue for the user), deliberately
+  not the generic "near-black + single neon accent" AI-template default.
+  Monospace carries every label, tool call, and number (the computed
+  layer); a plain system sans carries only the agent's own prose (the
+  explained layer) — the typeface split makes the system prompt's core
+  rule ("you explain a score, you never compute one") visible as a
+  design choice, not just an internal constraint.
+  Signature element: the tool-call log as a numbered flight-recorder
+  ticker (call order is the real reasoning trace here, not decoration)
+  with a live-pulse dot that's only lit while a stream is actually in
+  flight — meaningful state, not ambient animation.
+  Added empty states to both panels (an invitation to act, not a blank
+  screen) and a lightweight, escape-first JSON key/value/number
+  highlighter for the tool-log entries (regex over already-escaped text,
+  no library).
+  Zero backend/protocol changes: same element ids, same fetch/SSE
+  parsing logic, same endpoints. Verified live against LLM_PROVIDER=mock
+  — desktop and mobile (375px) screenshots, reset restores both empty
+  states, no console errors. Caught and fixed one real bug in the pass:
+  the input row overflowed off-screen on narrow viewports (a flex item
+  without `min-width: 0` refusing to shrink below its placeholder's
+  intrinsic width) — fixed with `min-width: 0` plus a `480px` wrap
+  breakpoint. `pytest` unaffected (183 passed) since no Python changed.

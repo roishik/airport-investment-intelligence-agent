@@ -31,7 +31,7 @@ choices actually happened.
 - **LLM provider calls are non-streaming.** The agent loop needs the
   complete `tool_calls` list before it can decide what to do next, so
   streaming the model's tokens buys nothing on a tool-calling turn — see
-  `openai_llm.py`'s docstring. MYWORDS
+  `openai_llm.py`'s docstring. MYWORDS: The reasoning cycles include tool-calls and thus we want the entire respond to come back and then run the tools one after the other. no benefit for us to stream the reasoning cycles. We can try to detect the final loop and return this turn specifically as streaming (no tool calls there), but its not worth the time.
 - **Chat UI is a single static HTML page + one FastAPI endpoint**, not a
   build-tooled frontend. UI polish is not what this brief asks for, and
   the tool-call log matters more than the styling.
@@ -695,3 +695,26 @@ actually need, and where each comes from:
   resolved — that grader fix shipped before the domain swap and the
   README now says so instead of describing a defect that no longer
   exists.
+
+## Post-P4 — closing the rank_by_priorities orphan-tool gap
+
+- **[20:40] Fixed via prompt engineering only, per Roi's call — no
+  code/schema change, checked with 1-2 live runs, not a new eval task.**
+  P4 found `rank_by_priorities` exists and is tested but the model never
+  reached for it on a stated-priorities query with no items named; it
+  ranked on default weights instead. Root cause: system_prompt.py rule
+  4a's "match the tool to the question shape" list named
+  compare_items/find_items/aggregate_records/estimate_derived_metric but
+  never mentioned rank_by_priorities at all — an orphaned tool by
+  omission, not by the model's judgment.
+  Added one clause to rule 4a: user states priorities in their own words
+  (not exact criterion names) -> rank_by_priorities, not compare_items on
+  default weights; map the words to emphasize/deemphasize and never
+  silently answer with the unstated default reweight.
+  Verified against the real API on the exact query that failed in the
+  P4 eval report ("I mainly care about airports that are growing and
+  aren't already packed to capacity"): now calls find_items then
+  rank_by_priorities and explains the reweighting out loud. Not added
+  back to the eval suite as a new task — Roi's explicit call, checked
+  live rather than formalized, since P5 is next and this was a targeted
+  prompt fix, not a new feature needing its own regression coverage.

@@ -46,6 +46,8 @@ import openpyxl
 DATA_DIR = Path(__file__).parent
 sys.path.insert(0, str(DATA_DIR.parent))
 
+from app.runway_geometry import Runway, arrival_capacity  # noqa: E402
+
 OURAIRPORTS_AIRPORTS_URL = "https://davidmegginson.github.io/ourairports-data/airports.csv"
 OURAIRPORTS_RUNWAYS_URL = "https://davidmegginson.github.io/ourairports-data/runways.csv"
 
@@ -429,6 +431,34 @@ def _population_fields(locid: str, airport_counties: dict, county_pop: dict) -> 
     }
 
 
+def _runway_geometry_fields(runways: list[Runway], total_runway_count: int) -> dict:
+    """Arrival-stream counts and parallel-runway separation, derived from
+    OurAirports runway coordinates. See app/runway_geometry.py for the
+    model and the FAA separation standards it applies.
+
+    `runway_geometry_complete` is False when some runways lacked usable
+    coordinates, so a consumer can tell "this airport genuinely has one
+    arrival stream" apart from "we could only see one of its runways."
+    """
+    cap = arrival_capacity(runways)
+    return {
+        "arrival_streams_vmc": cap.vmc_streams,
+        "arrival_streams_imc": cap.imc_streams,
+        "air_carrier_runway_count": cap.air_carrier_runways,
+        "min_parallel_separation_ft": cap.min_parallel_separation_ft,
+        "weather_capacity_degradation": round(cap.weather_degradation, 4),
+        "parallel_runway_pairs": [
+            {
+                "runways": f"{p.runway_a}/{p.runway_b}",
+                "separation_ft": p.separation_ft,
+                "imc_capability": p.imc_capability,
+            }
+            for p in cap.parallel_pairs
+        ],
+        "runway_geometry_complete": len(runways) == total_runway_count,
+    }
+
+
 def build_candidates() -> None:
     """Joins OurAirports (geo/type/runways), FAA enplanements (CY2025
     preliminary + CY2024 final), and Census county population growth
@@ -450,11 +480,34 @@ def build_candidates() -> None:
 
     id_to_locid = {a["id"]: locid for locid, a in airports.items()}
     runway_count = dict.fromkeys(airports, 0)
+    # Full runway geometry, not just a count -- the arrival-capacity model
+    # behind the unmet-demand question needs to know whether an airport's
+    # parallel runways are far enough apart to fly independently when the
+    # ceiling drops. See app/runway_geometry.py.
+    runway_geom: dict[str, list[Runway]] = {locid: [] for locid in airports}
     with open(DATA_DIR / "runways.csv", newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             locid = id_to_locid.get(row["airport_ref"])
-            if locid and row.get("closed") != "1":
-                runway_count[locid] += 1
+            if not locid or row.get("closed") == "1":
+                continue
+            runway_count[locid] += 1
+            try:
+                runway_geom[locid].append(
+                    Runway(
+                        ident=row["le_ident"],
+                        latitude_deg=float(row["le_latitude_deg"]),
+                        longitude_deg=float(row["le_longitude_deg"]),
+                        heading_deg=float(row["le_heading_degT"]),
+                        length_ft=float(row["length_ft"]),
+                    )
+                )
+            except (TypeError, ValueError):
+                # OurAirports leaves coordinates/heading blank on some
+                # runways. Skipped rather than guessed: a runway with no
+                # position contributes no geometry, and it still counts in
+                # runway_count above. Reported per-airport below so a gap
+                # is visible rather than silently degrading the model.
+                continue
 
     def nearest_competitor(locid: str) -> tuple[str, float]:
         lat1 = float(airports[locid]["latitude_deg"])
@@ -494,6 +547,7 @@ def build_candidates() -> None:
             "latitude_deg": float(a["latitude_deg"]),
             "longitude_deg": float(a["longitude_deg"]),
             "runway_count": runway_count[locid],
+            **_runway_geometry_fields(runway_geom[locid], runway_count[locid]),
             "faa_hub_class": f25["hub_class"],
             "enplanements_cy2025_prelim": f25["enplanements"],
             "enplanements_cy2024": f24.get("enplanements", f25["enplanements_prior_year"]),

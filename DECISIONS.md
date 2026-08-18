@@ -508,3 +508,118 @@ actually need, and where each comes from:
   than a preference: swapping the population criterion to the full window
   gives tau=0.89 (top becomes GPI), to migration-per-1,000 tau=0.88 (top
   becomes DEN).
+
+## P3 — wiring real data into the agent
+
+- **[18:50] Runway geometry is COMPUTED, not looked up — and this is the
+  most defensible thing in the submission.** Q4 asks for unmet demand at
+  SFO "and why," and the "why" is the hard half: a correlation does not
+  survive being asked twice, a mechanism does. SFO's real constraint is
+  physical and published — its parallel arrival runways are ~750 ft apart,
+  far below the 2,500 ft FAA requires for even dependent simultaneous
+  approaches, so in low visibility the two arrival streams collapse into
+  one and the arrival rate halves while the schedule doesn't.
+  Rather than hardcode that fact, `app/runway_geometry.py` derives it:
+  OurAirports publishes runway-end coordinates and true headings, so the
+  perpendicular centerline separation is computable. It returns **746.8 ft
+  for SFO against a published 750** — 0.4% off, from public data.
+  Subtlety that matters: it must be measured PERPENDICULAR to the runway
+  heading, not threshold-to-threshold. SFO's thresholds are staggered, so
+  the naive straight-line distance is 893 ft, which lands the airport in
+  the wrong FAA band. There's a test pinning both numbers.
+  The same computation runs on all 515 airports, which is what makes it a
+  model rather than one fact with arithmetic around it. It independently
+  recovers things nobody told it: **Denver shows ZERO degradation** (built
+  with runways 2,510+ ft apart, deliberately, for exactly this reason),
+  **Seattle 0.67** (16C/16L are 738 ft apart), **SNA 0.00** (single
+  runway). Rejected: hardcoding SFO's 750 ft — it would have been faster
+  and it would have collapsed the moment anyone asked about a second
+  airport.
+- **[18:55] The unmet-demand model replaced outright, not force-fitted.**
+  The skeleton's model was turnaways + discounted waitlist, which has no
+  airport analogue — no one records the passenger who was never
+  scheduled. Rewrote it as two additive terms with separate mechanisms:
+  weather-suppressed throughput (the runway-geometry story above) and
+  structural capacity deficit (demand projected one year forward at the
+  airport's own traffic and county-population growth, minus good-weather
+  runway capacity). The generic contract in `app/analytics.py` —
+  factors that provably sum to the value, mandatory assumptions and
+  caveat — survived untouched, which is the architecture working as
+  designed.
+  **The property worth defending is that it self-gates.** Anchorage loses
+  a third of its arrival capacity in low visibility and still returns
+  ZERO unmet demand, correctly, because at 12% utilization the remaining
+  capacity covers everything that wanted to fly. Weather degradation is
+  only a problem where demand is already near the ceiling. SFO returns
+  1.28M annual enplanements, **100% of it weather-driven and 0%
+  structural** — i.e. SFO does not need more terminal, it needs runway
+  separation it physically cannot have. That is the actual finding.
+  Capacity per arrival stream (7.8M enplanements/yr) is the 95th
+  percentile actually achieved across the eligible 144, not an invented
+  throughput figure. Noted honestly: San Diego does 12.7M on one runway,
+  so p95 is deliberately conservative and the estimate is a lower bound.
+  **Stated weakest input, first, in the assumptions:** IMC frequency is a
+  single national 12% applied uniformly, when the real rate is intensely
+  local (SFO's summer marine layer vs. Phoenix). Per-airport METAR
+  history from aviationweather.gov would fix it and is the highest-value
+  upgrade to the model.
+- **[19:30] Three bugs found by RUNNING the four questions, not by
+  reading the code. All three produced confident, plausible, wrong
+  answers — which is the category that matters.**
+  1. **Q3 reported "0% of flights out of Anchorage are long haul."** The
+     model asked `aggregate_records` for category `"long haul"`; the real
+     categories are `domestic`/`international`; zero rows matched and the
+     tool reported a zero. Every number in that sentence was correct and
+     the sentence was false. Fix: distinguish "no such category" from "a
+     real category with zero rows" — `unknown_category` plus
+     `known_categories` plus a `category_semantics` string saying which
+     available category is the right proxy and what its limitation is.
+     This is the same guard `find_items` already had via
+     `unknown_filter_keys`, applied to a category VALUE rather than a
+     filter KEY; the gap was that the idea had only been implemented in
+     one of the two places it applies.
+  2. **The eligibility gate leaked.** Asked for New England candidates,
+     the model called `find_items` without the eligibility filter and New
+     Bedford Regional (3,145 passengers, +53% "growth") came back ranked
+     4th — the exact failure the P2 gate exists to prevent, reappearing
+     because the gate lived in a filter the LLM had to remember to pass.
+     Fix: enforcement moved into `compare_items` itself, where it cannot
+     be bypassed by any prompt. Ineligible airports are RETURNED in an
+     `ineligible` list with a reason rather than silently dropped — the
+     user asked about them. `include_ineligible=True` is the deliberate
+     override. General lesson worth stating: a correctness rule the model
+     has to remember is not a rule, it's a suggestion.
+  3. **`resolve_entity("LA")` returned Lawton, Oklahoma** at 0.83
+     confidence, plus La Crosse and Lafayette — a two-character query is
+     a prefix of all three and Jaro-Winkler pays a large prefix bonus.
+     Two fixes: a `MIN_FUZZY_QUERY_LENGTH` guard (under 4 characters,
+     exact match only — a short query carries too little signal to rank
+     on), and a metro layer, because "LA" genuinely is not an airport.
+     `METRO_AIRPORTS` is the one hand-written structure in `dataset.py`
+     and it earns the exception: no public column says which airports
+     share a metro market. It returns all five LA-basin airports as
+     explicitly non-decisive, so the agent must state which reading it
+     used rather than silently picking the busiest.
+- **[19:40] `MaxTurnsExceeded` now carries its partial work.** It
+  previously raised bare and `/chat` had no handler, so a live demo that
+  tripped the turn ceiling showed a blank UI and an HTTP 500. Hitting the
+  ceiling means the agent ran out of turns, not that it learned nothing —
+  it may have made five good tool calls and never written them up. The
+  exception now carries the transcript and tool log, and `/chat` returns
+  a 200 with an honest partial answer plus the full tool log. History is
+  deliberately NOT updated on that path: the turn never reached a final
+  assistant message, and persisting a truncated transcript would corrupt
+  every subsequent turn. Converts a demo-day disaster into a
+  "here's my termination guarantee working" talking point.
+- **[19:45] FAA NAS Status is the one live call, and it is deliberately
+  outside the scored path.** Free, no key, real-time, and it returns XML
+  rather than JSON. A ground stop at SNA this afternoon says nothing
+  about whether SNA is worth a terminal investment over a decade — it is
+  weather or an equipment outage. Feeding transient operational status
+  into a capital-planning score would not survive ten seconds of
+  questioning, so it is presented as live operational colour with a
+  `scope_note` in the payload itself and a system-prompt rule forbidding
+  the model from treating it as evidence. Every failure mode returns
+  `available: false` with a reason rather than raising: this is decoration
+  on an answer that must still work without it, and a timeout on an
+  optional feed should degrade the response, not fail the question.

@@ -21,7 +21,8 @@ from app.tools import TOOL_REGISTRY, TOOL_SCHEMAS
 def main() -> None:
     provider = get_llm_provider()
     print(f"airport agent chat — LLM_PROVIDER={LLM_PROVIDER} ({provider.name}/{provider.model})")
-    print("Type a message, or 'exit' to quit. Try: 'compare option_a and option_b'\n")
+    print("Type a message, or 'exit' to quit.")
+    print("Try: 'which airports in New England are strong candidates for terminal expansion?'\n")
 
     history: list[dict] = []
     while True:

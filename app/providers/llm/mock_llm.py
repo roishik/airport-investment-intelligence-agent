@@ -22,10 +22,21 @@ import json
 import re
 from typing import Any
 
+from app import dataset
 from app.guardrails import unwrap_untrusted
 from app.providers.llm.base import LLMResponse, ToolCall
 
-_ITEM_ID_RE = re.compile(r"\boption_[a-z0-9]+\b", re.I)
+# Airport ids are 3-4 character FAA LocIDs. Matched case-insensitively
+# and then validated against the real dataset, because a bare
+# three-letter regex also matches "the", "and", "out" -- the validation,
+# not the pattern, is what makes this reliable.
+_ITEM_ID_RE = re.compile(r"\b[A-Za-z0-9]{3,4}\b")
+
+# Used when the user names no airport at all. A fixed, real set rather
+# than "every airport", so the offline path stays fast and its output
+# stays readable; these are the four the brief's own example questions
+# reference most directly.
+_DEFAULT_ITEM_IDS = ["LAX", "SNA", "SFO", "BOS"]
 
 
 class MockLLMProvider:
@@ -41,9 +52,12 @@ class MockLLMProvider:
 
     def _request_tool_call(self, messages: list[dict[str, Any]]) -> LLMResponse:
         last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
-        ids = _ITEM_ID_RE.findall(last_user) if isinstance(last_user, str) else []
+        found = _ITEM_ID_RE.findall(last_user) if isinstance(last_user, str) else []
+        # Keep only tokens that are genuinely airport ids. Without this the
+        # regex happily "finds" ids in ordinary English words.
+        ids = [t.upper() for t in found if t.upper() in dataset.AIRPORTS]
         if not ids:
-            ids = ["option_a", "option_b", "option_c"]
+            ids = [i for i in _DEFAULT_ITEM_IDS if i in dataset.AIRPORTS]
         # dedupe, preserve order
         seen: set[str] = set()
         ids = [i for i in ids if not (i.lower() in seen or seen.add(i.lower()))]

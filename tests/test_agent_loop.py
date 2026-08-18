@@ -41,7 +41,7 @@ def test_resolve_entity_is_exposed_to_the_model():
 def test_run_agent_end_to_end_with_mock_provider():
     provider = MockLLMProvider()
     result = run_agent(
-        user_message="compare option_a and option_b for me",
+        user_message="compare LAX and SNA for me",
         history=[],
         provider=provider,
         tool_schemas=TOOL_SCHEMAS,
@@ -51,10 +51,10 @@ def test_run_agent_end_to_end_with_mock_provider():
     assert result.final_text  # non-empty final answer
     assert len(result.tool_log) == 1
     assert result.tool_log[0].tool_name == "compare_items"
-    assert result.tool_log[0].arguments["item_ids"] == ["option_a", "option_b"]
+    assert result.tool_log[0].arguments["item_ids"] == ["LAX", "SNA"]
     assert result.tool_log[0].error is None
     # the mock's explanation should reference the winning item id
-    assert "option_a" in result.final_text or "option_b" in result.final_text
+    assert "LAX" in result.final_text or "SNA" in result.final_text
 
 
 def test_run_agent_falls_back_to_all_items_when_none_named():
@@ -67,7 +67,7 @@ def test_run_agent_falls_back_to_all_items_when_none_named():
         tool_registry=TOOL_REGISTRY,
         system_prompt=BASE_SYSTEM_PROMPT,
     )
-    assert result.tool_log[0].arguments["item_ids"] == ["option_a", "option_b", "option_c"]
+    assert result.tool_log[0].arguments["item_ids"] == ["LAX", "SNA", "SFO", "BOS"]
 
 
 def test_run_agent_wraps_tool_result_as_untrusted_data():
@@ -76,7 +76,7 @@ def test_run_agent_wraps_tool_result_as_untrusted_data():
     inside the loop, not just available as a library function."""
     provider = MockLLMProvider()
     result = run_agent(
-        user_message="compare option_a and option_c",
+        user_message="compare LAX and SFO",
         history=[],
         provider=provider,
         tool_schemas=TOOL_SCHEMAS,
@@ -156,7 +156,7 @@ def test_max_turns_exceeded_raises_instead_of_looping_forever():
         def chat(self, messages: list[dict[str, Any]], tools=None) -> LLMResponse:
             return LLMResponse(
                 content=None,
-                tool_calls=(ToolCall(id="c1", name="get_item_metrics", arguments={"item_id": "option_a"}),),
+                tool_calls=(ToolCall(id="c1", name="get_item_metrics", arguments={"item_id": "LAX"}),),
                 provider=self.name,
                 model=self.model,
             )
@@ -220,3 +220,37 @@ def test_injected_tool_output_is_flagged_but_still_visible_not_silently_dropped(
     )
     assert scan_for_injection(malicious_payload).flagged is True
     assert "ignored it" in result.final_text
+
+
+def test_max_turns_exceeded_carries_the_partial_work():
+    """Hitting the turn ceiling means the agent ran out of turns, not that
+    it learned nothing. The exception must carry the tool log so the API
+    can show what WAS found instead of a blank screen and a 500."""
+
+    class NeverFinishesProvider:
+        name, model = "never-finishes", "test"
+
+        def chat(self, messages, tools=None):
+            return LLMResponse(
+                content=None,
+                tool_calls=(ToolCall(id="c", name="get_item_metrics", arguments={"item_id": "LAX"}),),
+                provider=self.name,
+                model=self.model,
+            )
+
+    with pytest.raises(MaxTurnsExceeded) as excinfo:
+        run_agent(
+            user_message="loop forever please",
+            history=[],
+            provider=NeverFinishesProvider(),
+            tool_schemas=TOOL_SCHEMAS,
+            tool_registry=TOOL_REGISTRY,
+            system_prompt=BASE_SYSTEM_PROMPT,
+            max_turns=3,
+        )
+
+    exc = excinfo.value
+    assert exc.turns_used == 3
+    assert len(exc.tool_log) == 3
+    assert all(e.error is None for e in exc.tool_log)
+    assert exc.messages

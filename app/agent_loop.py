@@ -61,7 +61,27 @@ class AgentResult:
 class MaxTurnsExceeded(RuntimeError):
     """Raised when the provider keeps requesting tool calls past
     max_turns without ever returning a final answer. A hand-rolled loop
-    has to enforce this itself — nothing does it for you."""
+    has to enforce this itself — nothing does it for you.
+
+    Carries the work done so far. Hitting the ceiling means the agent ran
+    out of turns, NOT that it learned nothing: it may have made five
+    successful tool calls and simply never written them up. Throwing that
+    away would turn a partial answer into a blank screen, so the caller
+    gets the transcript and the tool log and can present what was found
+    while saying plainly that the answer is incomplete.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        messages: list[dict[str, Any]] | None = None,
+        tool_log: list[ToolLogEntry] | None = None,
+        turns_used: int = 0,
+    ):
+        super().__init__(message)
+        self.messages = messages or []
+        self.tool_log = tool_log or []
+        self.turns_used = turns_used
 
 
 def run_agent(
@@ -131,4 +151,9 @@ def run_agent(
                 }
             )
 
-    raise MaxTurnsExceeded(f"agent did not produce a final answer within {max_turns} turns")
+    raise MaxTurnsExceeded(
+        f"agent did not produce a final answer within {max_turns} turns",
+        messages=messages,
+        tool_log=tool_log,
+        turns_used=max_turns,
+    )

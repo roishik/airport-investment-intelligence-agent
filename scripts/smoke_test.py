@@ -29,7 +29,7 @@ def main() -> None:
     print(f"LLM_PROVIDER={LLM_PROVIDER!r} -> provider={provider.name} model={provider.model}\n")
 
     result = run_agent(
-        user_message="Compare option_a, option_b, and option_c and tell me which is best, and why.",
+        user_message="Compare LAX and SNA congestion levels and tell me which is more constrained, and why.",
         history=[],
         provider=provider,
         tool_schemas=TOOL_SCHEMAS,

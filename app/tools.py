@@ -1,5 +1,5 @@
 """
-tools.py — example tool(s) the agent can call.
+tools.py — the tools the agent can call, and this domain's actual KPIs.
 
 The point of this file: the LLM never sees a KPI it has to compute. It
 only ever sees numbers app/scoring.py already computed, PLUS the raw
@@ -7,16 +7,25 @@ inputs, so it can talk about them without ever being trusted to do the
 arithmetic. Every tool below returns a per-component breakdown (raw
 value, normalized score, weight, contribution) — never a bare number.
 
-In a real rep, replace `_MOCK_DATASET` and `fetch_item_metrics` with an
-actual public-API call (requests/httpx, with a timeout and real error
-handling). Nothing else here — the shape tools return to the LLM — should
-need to change. Keep TOOL_SCHEMAS' descriptions explicit about "call this
-tool, don't estimate" — that instruction earns its keep at the tool level,
-not just in the system prompt.
+This is also the ONLY module that holds domain judgement. scoring.py has
+the generic weighted ranker, analytics.py the generic filter/aggregate/
+derived-metric contracts, runway_geometry.py the generic airfield
+geometry — none of them know what an airport is worth. The criteria,
+their weights and bounds, and the unmet-demand model all live here, so
+"what did you decide, and why" has one address.
+
+Data comes from app/dataset.py (static JSON rebuilt by
+data/refresh_data.py from FAA, OurAirports, US Census and BTS — all
+public, all keyless). The one genuinely live call is FAA NAS Status; it
+is deliberately kept OUT of the scored path, because a ground stop today
+says nothing about whether an airport is worth expanding over a decade.
 """
 from __future__ import annotations
 
+import urllib.error
+import urllib.request
 from typing import Any, Callable
+from xml.etree import ElementTree
 
 from app.analytics import (
     SUPPORTED_OPERATIONS,
@@ -27,6 +36,7 @@ from app.analytics import (
     filter_items,
     known_attribute_keys,
 )
+from app import dataset
 from app.entity_resolution import resolve
 from app.scoring import (
     PRIORITY_EMPHASIS_FACTOR,
@@ -38,81 +48,42 @@ from app.scoring import (
     sensitivity_analysis,
 )
 
-# Stand-in for "call a public API and get back structured data." Kept as
-# an in-memory dict here so the WHOLE app — agent loop, tools,
-# scoring, chat UI — is runnable offline with zero network dependency and
-# zero API keys. Swap fetch_item_metrics()'s body for a real HTTP call
-# when you wire up the real assignment; see README "Tool error handling".
-_MOCK_DATASET: dict[str, dict[str, float]] = {
-    "option_a": {"cost": 120.0, "quality": 8.5, "lead_time_days": 3},
-    "option_b": {"cost": 90.0, "quality": 6.0, "lead_time_days": 7},
-    "option_c": {"cost": 150.0, "quality": 9.2, "lead_time_days": 1},
-}
-
-# Categorical attributes, kept SEPARATE from the numeric metrics above:
-# these are what you filter/subset on, not what you score on. Mixing the
-# two in one dict is how a categorical value ends up accidentally
-# normalized as if it were a KPI.
-_MOCK_ATTRIBUTES: dict[str, dict[str, str]] = {
-    "option_a": {"region": "north", "tier": "premium", "status": "active"},
-    "option_b": {"region": "south", "tier": "standard", "status": "active"},
-    "option_c": {"region": "north", "tier": "premium", "status": "retired"},
-}
-
-# Per-item sub-records — the granularity a "what share of X is Y?"
-# question needs. A composite score can't answer that: it's a count over
-# a subset of one entity's own rows, not a ranking across entities. This
-# is the shape behind the brief's "percentage of long haul flights out of
-# Anchorage" question.
-_MOCK_RECORDS: dict[str, list[dict[str, Any]]] = {
-    "option_a": [
-        {"category": "long_haul", "units": 40.0},
-        {"category": "short_haul", "units": 60.0},
-        {"category": "long_haul", "units": 20.0},
-    ],
-    "option_b": [
-        {"category": "short_haul", "units": 90.0},
-        {"category": "long_haul", "units": 10.0},
-    ],
-    "option_c": [
-        {"category": "long_haul", "units": 75.0},
-        {"category": "short_haul", "units": 25.0},
-    ],
-}
-
-# Inputs to the derived/modeled metric (A5). Deliberately NOT a stored
-# "unmet_demand" column — the whole point is that the answer exists in no
-# dataset and has to be computed from observable proxies, with its
-# assumptions visible. See app/analytics.py:estimate_unmet_demand.
-_MOCK_DEMAND_INPUTS: dict[str, dict[str, float]] = {
-    "option_a": {"served_units": 120.0, "capacity_units": 130.0, "turnaways": 25.0, "waitlist": 18.0},
-    "option_b": {"served_units": 100.0, "capacity_units": 180.0, "turnaways": 2.0, "waitlist": 1.0},
-    "option_c": {"served_units": 100.0, "capacity_units": 105.0, "turnaways": 40.0, "waitlist": 30.0},
-}
-
-# item_id -> every text a user might plausibly use to refer to it. The id
-# itself is included so an exact-id query still resolves through the same
-# path (no special case). In a real rep this comes from the dataset's own
-# name/alias columns — e.g. an airport's IATA code, ICAO code, official
-# name, and city — NOT from a hand-written list.
+# ── This assignment's criteria ───────────────────────────────────────────
+# The brief asks where renovation is "most profitable based on INCREASED
+# flight and passenger capacity" — a headroom question, not a size
+# question. Ranking on present-day size answers a different question and
+# puts LAX first regardless of whether expanding LAX returns anything.
 #
-# Deliberately populated with names that collide ("option A" vs "option
-# alpha" both plausibly meaning option_a; "the cheap one" matching
-# nothing well) so the ambiguity path is exercised by the offline
-# offline path rather than only appearing once real data lands.
-_ENTITY_CATALOG: dict[str, list[str]] = {
-    "option_a": ["option_a", "Option A", "Alpha", "the alpha option"],
-    "option_b": ["option_b", "Option B", "Bravo", "the bravo option"],
-    "option_c": ["option_c", "Option C", "Charlie", "the charlie option"],
-}
-
-# Example criteria — replace with the real assignment's KPIs. Bounds are
-# the min-max normalization window (see Criterion.normalize in scoring.py),
-# not a hard validity range; values outside them just clamp to 0 or 1.
+# So the two genuinely forward-looking signals carry 50% between them,
+# and the two size-flavoured ones 30%, with absolute_scale alone held to
+# 15%. Sanity check that this works: LAX ranks 67th of 144, not 1st.
+#
+# Bounds are the 5th/95th percentile of the ELIGIBLE set, measured
+# 2026-08-18 and frozen as constants rather than recomputed per query —
+# a ranking has to be reproducible, and bounds that shift with whatever
+# subset was passed in would make two runs silently incomparable.
+# Criterion.normalize clamps anything outside them, so an out-of-range
+# value degrades gracefully instead of escaping [0,1].
+#
+# Every one of these is higher_is_better: more growth, more regional
+# demand, more isolation from competitors, more pressure, more scale.
 DEFAULT_CRITERIA: list[Criterion] = [
-    Criterion(name="cost", weight=1.0, lower_bound=80, upper_bound=160, higher_is_better=False),
-    Criterion(name="quality", weight=2.0, lower_bound=0, upper_bound=10, higher_is_better=True),
-    Criterion(name="lead_time_days", weight=1.0, lower_bound=0, upper_bound=10, higher_is_better=False),
+    # Is traffic already rising? FAA's own CY2024->CY2025 change.
+    Criterion(name="traffic_growth", weight=25, lower_bound=-0.07884, upper_bound=0.13817),
+    # Is the region it serves growing? Census county population CAGR,
+    # 2022->2025. The only demand-side signal in the set, and the one
+    # that genuinely decorrelates the ranking from airport size.
+    Criterion(name="regional_demand_growth", weight=25, lower_bound=-0.00250, upper_bound=0.02411),
+    # Can demand escape to another airport? Distance to the nearest
+    # commercial-service competitor, in miles.
+    Criterion(name="catchment_monopoly", weight=20, lower_bound=10.7, upper_bound=100.61),
+    # Passengers per air-carrier runway. Correlates r=0.89 with
+    # absolute_scale — kept because it is the only congestion proxy
+    # available and the LA/Santa-Ana comparison needs one, but held to
+    # 15% and disclosed rather than hidden. See DECISIONS.md [18:20].
+    Criterion(name="capacity_pressure", weight=15, lower_bound=201438.53, upper_bound=7823094.2),
+    # Size of the prize. Deliberately the joint-smallest weight.
+    Criterion(name="absolute_scale", weight=15, lower_bound=564368.0, upper_bound=26519646.05),
 ]
 
 
@@ -120,15 +91,26 @@ class UnknownItemError(KeyError):
     pass
 
 
+def _unknown_airport(item_id: str) -> UnknownItemError:
+    """One error message shape for every 'no such airport' case. Names a
+    few real ids rather than dumping 515, and points at resolve_entity —
+    the model's next move should be to resolve the name, not to guess
+    another code."""
+    return UnknownItemError(
+        f"unknown airport id={item_id!r}. Ids are FAA LocIDs (usually the IATA code): "
+        f"e.g. {', '.join(list(dataset.AIRPORTS)[:5])}. "
+        "Call resolve_entity first to turn a name or city into an id."
+    )
+
+
 def fetch_item_metrics(item_id: str) -> dict[str, float]:
-    """Stand-in for a public-API call. Raises UnknownItemError for unknown
-    ids — replace with real HTTP error handling (timeouts, 4xx/5xx,
-    retries) in the real assignment. The agent loop treats any exception
-    raised here as a tool error, reports it in the tool log, and never
-    fabricates a result — see agent_loop.py."""
-    if item_id not in _MOCK_DATASET:
-        raise UnknownItemError(f"unknown item_id={item_id!r}; known ids: {list(_MOCK_DATASET)}")
-    return dict(_MOCK_DATASET[item_id])
+    """Raw criterion inputs for one airport, straight from the built
+    dataset. Any criterion the airport has no data for is simply absent —
+    scoring.py renormalizes each item's weights over what IS present, so
+    a gap costs that airport the criterion, not the whole ranking."""
+    if item_id not in dataset.METRICS:
+        raise _unknown_airport(item_id)
+    return dict(dataset.METRICS[item_id])
 
 
 # ── OpenAI-style tool schemas (Anthropic provider converts these; see
@@ -148,7 +130,12 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "each) — mention exclusions to the user rather than ignoring "
                 "them. Always call this tool for any ranking or comparison "
                 "question — never estimate or guess a score or ranking "
-                "yourself."
+                "yourself. Airports below FAA primary-airport hub class "
+                "(L/M/S) are automatically set aside and returned in "
+                "'ineligible' — percentage growth on a tiny base is not an "
+                "investment signal. When 'ineligible' is non-empty, tell the "
+                "user which airports were set aside and why; do not present a "
+                "silently shortened list."
             ),
             "parameters": {
                 "type": "object",
@@ -156,7 +143,11 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "item_ids": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Item ids to compare, e.g. ['option_a', 'option_b'].",
+                        "description": (
+                            "Airport ids to compare — FAA LocIDs, usually the IATA "
+                            "code, e.g. ['LAX', 'SNA']. Use resolve_entity or "
+                            "find_items to obtain these; do not type them from memory."
+                        ),
                     }
                 },
                 "required": ["item_ids"],
@@ -168,9 +159,14 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "function": {
             "name": "get_item_metrics",
             "description": (
-                "Fetch raw metrics for a single item id, with no scoring "
-                "applied. Use this for factual questions about one item that "
-                "don't require a ranking or comparison."
+                "Fetch raw metrics for ONE airport, with no scoring applied. "
+                "Use this only for a factual question about a single airport. "
+                "Do NOT call it twice to compare two airports — raw metrics "
+                "are on wildly different scales (passengers vs. miles vs. "
+                "percentages) and are not comparable as-is. Any question that "
+                "compares, ranks, or asks which is more congested must go "
+                "through compare_items, which normalizes them and returns "
+                "weighted contributions."
             ),
             "parameters": {
                 "type": "object",
@@ -184,8 +180,9 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
         "function": {
             "name": "resolve_entity",
             "description": (
-                "Turn a user's free-text reference to a thing ('the alpha "
-                "one', a partial or misspelled name) into concrete item ids. "
+                "Turn a user's free-text reference to an airport ('LA', "
+                "'Santa Ana', 'Logan', a partial or misspelled name) into "
+                "concrete airport ids. "
                 "ALWAYS call this before compare_items or get_item_metrics "
                 "when the user named something in words rather than giving an "
                 "exact id — never guess or invent an id yourself. Returns "
@@ -201,7 +198,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The user's own words for the item, e.g. 'the alpha option'.",
+                        "description": "The user's own words, e.g. 'Santa Ana' or 'the LA airport'.",
                     }
                 },
                 "required": ["query"],
@@ -215,8 +212,8 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             "description": (
                 "Find every item matching a set of attribute filters (all "
                 "filters must match — AND, not OR). Use this whenever the user "
-                "describes a GROUP rather than naming items ('the ones in the "
-                "north region', 'all premium tier'). NEVER list ids from "
+                "describes a GROUP rather than naming airports ('airports in "
+                "New England', 'large hubs in the West'). NEVER list ids from "
                 "memory to build such a group — call this. Returns the "
                 "matching ids plus the attribute keys that actually exist, so "
                 "you can tell the user when they asked about a field the "
@@ -229,8 +226,12 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                         "type": "object",
                         "description": (
                             "Attribute name -> required value, e.g. "
-                            "{'region': 'north', 'tier': 'premium'}. Matching is "
-                            "case-insensitive."
+                            "{'new_england': 'yes'} or {'region': 'West', "
+                            "'hub_class': 'L'}. Available keys include: state "
+                            "(2-letter), region (Census region), new_england "
+                            "(yes/no), hub_class (L/M/S/N/None), municipality, "
+                            "weather_constrained (yes/no), ranking_eligible "
+                            "(yes/no). Matching is case-insensitive."
                         ),
                         "additionalProperties": {"type": "string"},
                     }
@@ -247,8 +248,19 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "Compute a deterministic aggregate (share, mean, count, sum) "
                 "over ONE item's sub-records, optionally restricted to a "
                 "category. This is the tool for single-entity statistics like "
-                "'what percentage of X's volume is long haul?' — that is NOT a "
-                "ranking question, so do not use compare_items for it. "
+                "'what percentage of flights out of Anchorage are long haul?' — "
+                "that is NOT a ranking question, so do not use compare_items "
+                "for it. Departure-mix records exist for Anchorage (ANC) only; "
+                "for any other airport this tool reports that no record-level "
+                "data exists, which you must relay rather than estimating. "
+                "The 'category' argument must be one of the dataset's OWN "
+                "category values, not the user's phrasing: call with no "
+                "category first to see 'known_categories' and "
+                "'category_semantics', then call again with a real one. If "
+                "'unknown_category' comes back true you asked for something "
+                "that does not exist — that is NOT a zero result and you must "
+                "never report it as 0%. Always relay 'category_semantics' when "
+                "it says the figure is a proxy. "
                 "'share' is computed on units/magnitude; the record counts are "
                 "returned too, so if the user meant share-by-count you can give "
                 "that instead. Never compute a percentage yourself."
@@ -263,7 +275,7 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     },
                     "category": {
                         "type": "string",
-                        "description": "Optional record category to restrict to, e.g. 'long_haul'.",
+                        "description": "Optional record category, e.g. 'international' or 'domestic'.",
                     },
                 },
                 "required": ["item_id", "operation"],
@@ -279,7 +291,11 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                 "currently 'unmet_demand' — and return it with the contributing "
                 "factors, their magnitudes, the model's assumptions, a "
                 "confidence level, and a caveat. Use this for 'what is the "
-                "unmet demand at X, and why?'-shaped questions. When explaining "
+                "unmet demand at X, and why?'-shaped questions. The two factors "
+                "are weather-suppressed throughput (parallel runways too close "
+                "to fly independently in low visibility, so arrival capacity "
+                "collapses) and structural capacity deficit (demand projected "
+                "forward exceeds good-weather runway capacity). When explaining "
                 "the 'why', use ONLY the returned factors and their magnitudes; "
                 "never invent a cause. Always report the confidence and caveat "
                 "— this is a model output, not an observation, and presenting "
@@ -316,7 +332,12 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                     "emphasize": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Criterion names the user cares MORE about, e.g. ['cost', 'lead_time_days'].",
+                        "description": (
+                            "Criterion names the user cares MORE about, e.g. "
+                            "['traffic_growth', 'regional_demand_growth']. Valid names: "
+                            "traffic_growth, regional_demand_growth, catchment_monopoly, "
+                            "capacity_pressure, absolute_scale."
+                        ),
                     },
                     "deemphasize": {
                         "type": "array",
@@ -374,41 +395,150 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_live_airport_status",
+            "description": (
+                "Fetch CURRENT operational status for one airport from FAA's "
+                "live NAS Status feed — ground stops, ground delay programs, "
+                "closures, arrival/departure delays. Use this only when the "
+                "user asks what is happening NOW. This is live operational "
+                "colour and is NOT part of the investment score: never present "
+                "a ground delay as evidence for or against expanding an "
+                "airport, and say so if the user conflates them. If "
+                "'available' is false the feed was unreachable — report the "
+                "rest of the answer without it rather than guessing."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"item_id": {"type": "string"}},
+                "required": ["item_id"],
+            },
+        },
+    },
 ]
 
 
+# Two scores this close are the same score. Chosen from the real data
+# rather than picked round: at the final weights the top two airports
+# (Nashville 0.6343, Denver 0.6317) differ by 0.0026, and the winner
+# flips on a 10% change to a single weight — so anything inside this band
+# is a tie the tool has no business breaking silently.
+#
+# Same shape as entity_resolution's `decisive` flag, deliberately: a
+# confidence floor plus a required GAP. One convention for "the data does
+# not actually separate these," used in both places it comes up.
+DECISIVE_SCORE_GAP = 0.005
+
+
+def _tie_group(ranked: list[dict[str, Any]]) -> list[str]:
+    """Ids at the top that are within DECISIVE_SCORE_GAP of first place.
+
+    Returns [] when the leader is clear. Length >= 2 means "these are
+    tied" — never "here is the winner" — and the system prompt requires
+    the model to say so.
+    """
+    if len(ranked) < 2:
+        return []
+    top = ranked[0]["total_score"]
+    tied = [r["item_id"] for r in ranked if top - r["total_score"] <= DECISIVE_SCORE_GAP]
+    return tied if len(tied) > 1 else []
+
+
 def compare_items(
-    item_ids: list[str], criteria: list[Criterion] | None = None, coverage_threshold: float = 0.5
+    item_ids: list[str],
+    criteria: list[Criterion] | None = None,
+    coverage_threshold: float = 0.5,
+    include_ineligible: bool = False,
 ) -> dict[str, Any]:
+    """Rank the given airports on the deterministic criteria.
+
+    ELIGIBILITY IS ENFORCED HERE, not upstream, and that placement is the
+    point. The gate (FAA hub class L/M/S) exists because percentage growth
+    on a near-zero base is meaningless — but a filter the caller has to
+    remember is a filter that gets forgotten. It was: asked for New
+    England candidates, the model called find_items without the
+    eligibility filter and New Bedford Regional (3,145 passengers, +53%
+    "growth") came back ranked 4th, which is the precise failure the gate
+    was introduced to prevent.
+
+    So the ranking tool refuses to rank ineligible airports by default,
+    regardless of how the ids were obtained. They are RETURNED in
+    `ineligible` with a reason rather than silently dropped — the user
+    asked about them and deserves to be told why they are not in the list.
+    `include_ineligible=True` overrides it for a caller who genuinely
+    wants the long tail.
+    """
     criteria = criteria or DEFAULT_CRITERIA
+
+    ineligible: list[dict[str, Any]] = []
+    if not include_ineligible:
+        eligible_ids = set(dataset.ELIGIBLE_IDS)
+        kept = []
+        for item_id in item_ids:
+            if item_id in eligible_ids or item_id not in dataset.AIRPORTS:
+                kept.append(item_id)
+                continue
+            airport = dataset.AIRPORTS[item_id]
+            ineligible.append(
+                {
+                    "item_id": item_id,
+                    "name": airport.get("name"),
+                    "faa_hub_class": airport.get("faa_hub_class"),
+                    "enplanements": airport.get("enplanements_cy2025_prelim"),
+                    "reason": (
+                        "Below FAA primary-airport hub class (L/M/S). Percentage growth on a "
+                        "base this small is not a meaningful investment signal, so it is "
+                        "excluded from ranking rather than allowed to top it."
+                    ),
+                }
+            )
+        item_ids = kept
+
     items = {item_id: fetch_item_metrics(item_id) for item_id in item_ids}
     result = rank_items(items, criteria, coverage_threshold=coverage_threshold)
+    ranking = [
+        {
+            "rank": r.rank,
+            "item_id": r.item_id,
+            "total_score": round(r.total_score, 4),
+            "covered_weight": round(r.covered_weight, 4),
+            "missing_criteria": list(r.missing_criteria),
+            "components": [
+                {
+                    "criterion": comp.criterion,
+                    "raw_value": comp.raw_value,
+                    "normalized_score": round(comp.normalized_score, 4),
+                    "weight": round(comp.weight, 4),
+                    "contribution": round(comp.contribution, 4),
+                }
+                for comp in r.components
+            ],
+        }
+        for r in result.ranked
+    ]
+    tied = _tie_group(ranking)
     return {
         "criteria": [
             {"name": c.name, "weight": c.weight, "higher_is_better": c.higher_is_better}
             for c in criteria
         ],
         "coverage_threshold": coverage_threshold,
-        "ranking": [
-            {
-                "rank": r.rank,
-                "item_id": r.item_id,
-                "total_score": round(r.total_score, 4),
-                "covered_weight": round(r.covered_weight, 4),
-                "missing_criteria": list(r.missing_criteria),
-                "components": [
-                    {
-                        "criterion": comp.criterion,
-                        "raw_value": comp.raw_value,
-                        "normalized_score": round(comp.normalized_score, 4),
-                        "weight": round(comp.weight, 4),
-                        "contribution": round(comp.contribution, 4),
-                    }
-                    for comp in r.components
-                ],
-            }
-            for r in result.ranked
-        ],
+        # Non-empty means the top of this ranking is a statistical tie and
+        # must be reported as one. The scores are real and the ordering is
+        # deterministic, but the separation is smaller than the weighting
+        # judgement that produced it, so calling #1 a winner would claim a
+        # precision the method does not have.
+        "tied_at_top": tied,
+        "decisive": not tied,
+        "tie_threshold": DECISIVE_SCORE_GAP,
+        # Airports the caller asked about that are below FAA primary-airport
+        # hub class. Returned, not silently dropped — tell the user these
+        # were set aside and why, rather than showing a shorter list with no
+        # explanation.
+        "ineligible": ineligible,
+        "ranking": ranking,
         # Items with SOME data but too little of it to score fairly, per
         # coverage_threshold — surfaced explicitly rather than silently dropped,
         # so the LLM can tell the user "N excluded, here's why" instead of
@@ -439,10 +569,41 @@ def resolve_entity(query: str) -> dict[str, Any]:
     with fetch_item_metrics's UnknownItemError, where being handed an id
     that doesn't exist really is a bug worth naming loudly.
     """
-    result = resolve(query, _ENTITY_CATALOG)
+    # A metro name is not a failed airport match — it is a DIFFERENT kind
+    # of answer, and collapsing it to the busiest airport would silently
+    # decide something the user didn't. Checked first, and returned as an
+    # explicitly non-decisive result so the model has to say which
+    # reading it took.
+    metro = dataset.resolve_metro(query)
+    if metro is not None:
+        name, ids = metro
+        return {
+            "query": query,
+            "decisive": False,
+            "match_type": "metro_area",
+            "metro_name": name,
+            "candidates": [
+                {
+                    "item_id": i,
+                    "matched_text": name,
+                    "confidence": 1.0,
+                    "signals": {"metro_area_member": 1.0},
+                }
+                for i in ids
+            ],
+            "clarification_required": (
+                f"{query!r} names a metropolitan area with {len(ids)} commercial airports "
+                f"({', '.join(ids)}), not a single airport. State which reading you are using — "
+                f"the primary airport ({ids[0]}) or the whole metro — before answering, or ask "
+                "the user which they meant. Do not silently pick one."
+            ),
+        }
+
+    result = resolve(query, dataset.ENTITY_CATALOG)
     return {
         "query": result.query,
         "decisive": result.decisive,
+        "match_type": "airport",
         "candidates": [
             {
                 "item_id": c.item_id,
@@ -460,8 +621,8 @@ def find_items(filters: dict[str, str]) -> dict[str, Any]:
     that actually exist, so an unknown field reads as "there is no such
     field" rather than as "nothing matched" — those are different
     answers and conflating them misleads the user."""
-    matched = filter_items(_MOCK_ATTRIBUTES, filters)
-    known_keys = known_attribute_keys(_MOCK_ATTRIBUTES)
+    matched = filter_items(dataset.ATTRIBUTES, filters)
+    known_keys = known_attribute_keys(dataset.ATTRIBUTES)
     unknown_keys = [k for k in filters if k.casefold() not in known_keys]
     return {
         "filters": dict(filters),
@@ -480,11 +641,55 @@ def aggregate_records(item_id: str, operation: str, category: str | None = None)
     deliberately a separate code path from scoring.py — a share is a
     count over one entity's own rows, with no weights and nothing to
     normalize."""
-    if item_id not in _MOCK_RECORDS:
-        raise UnknownItemError(f"unknown item_id={item_id!r}; known ids: {list(_MOCK_RECORDS)}")
+    if item_id not in dataset.RECORDS:
+        if item_id in dataset.AIRPORTS:
+            raise UnknownItemError(
+                f"no record-level departure data for {item_id!r}. BTS publishes per-origin "
+                f"segment summaries for {', '.join(dataset.RECORDS)} only in this dataset; the "
+                "per-route microdata that would cover every airport is TranStats-only and "
+                "bot-blocked. Say so rather than estimating a share."
+            )
+        raise _unknown_airport(item_id)
+
+    records = dataset.RECORDS[item_id]
+    known_categories = sorted({str(r["category"]) for r in records if "category" in r})
+
+    # "No such category" and "a real category with zero rows" are DIFFERENT
+    # answers, and conflating them is how a tool produces a confident
+    # falsehood. Found by running the brief's own question: the model asked
+    # for category "long haul" (which does not exist here — the categories
+    # are domestic/international), matched nothing, and reported "0% of
+    # flights out of Anchorage are long haul." Every number in that
+    # sentence was correct and the sentence was false.
+    #
+    # Same guard find_items already had via unknown_filter_keys; this is
+    # that idea applied to a category VALUE rather than a filter KEY.
+    unknown_category = category is not None and category.casefold() not in {
+        c.casefold() for c in known_categories
+    }
+    if unknown_category:
+        return {
+            "item_id": item_id,
+            "operation": operation,
+            "category": category,
+            "value": None,
+            "defined": False,
+            "known_categories": known_categories,
+            "unknown_category": True,
+            "category_semantics": dataset.CATEGORY_SEMANTICS.get(item_id),
+            "guidance": (
+                f"{category!r} is not a category in this dataset — the available categories are "
+                f"{known_categories}. This is NOT the same as a zero result: do not report "
+                f"'0%' or 'none'. Read 'category_semantics' above: it says which available "
+                "category is the right proxy for what was asked. Call this tool again with that "
+                "category and answer the question — do not stop to ask the user which category "
+                "they want when the semantics already say which one applies. Then state plainly "
+                "that the figure is a proxy and what its limitation is."
+            ),
+        }
 
     result = aggregate(
-        _MOCK_RECORDS[item_id],
+        records,
         operation=operation,
         value_field="units",
         group_by_field="category" if category is not None else None,
@@ -500,6 +705,11 @@ def aggregate_records(item_id: str, operation: str, category: str | None = None)
         "category": result.group_value,
         "value": round(value, 6) if is_defined else None,
         "defined": is_defined,
+        "known_categories": known_categories,
+        "unknown_category": False,
+        # How to read these categories in the user's vocabulary, including
+        # where they are a proxy rather than the requested measurement.
+        "category_semantics": dataset.CATEGORY_SEMANTICS.get(item_id),
         # The arithmetic, exposed — so the model explains a number it
         # never computed, same contract as compare_items' components.
         "matching_records": result.matching_records,
@@ -515,118 +725,198 @@ def aggregate_records(item_id: str, operation: str, category: str | None = None)
 
 
 # ── The DOMAIN model behind estimate_derived_metric ──────────────────────
-# This is example code: "unmet demand" is one assignment's modelled
-# quantity, not a generic feature. Replace this whole section with the
-# real assignment's derived metric and keep app/analytics.py untouched —
-# that module holds only the generic contract (factors summing to the
-# value, mandatory assumptions/caveat/confidence).
+# "Unmet demand at SFO, and why" is the question this exists for, and the
+# "why" is the hard half. A correlation would not survive being asked
+# twice; a mechanism does. So the model is built on a physical, published
+# constraint rather than a fitted relationship.
 #
-# Weight applied to waitlist entries when converting them into implied
-# demand. Below 1.0 because a waitlist entry is WEAKER evidence than a
-# turnaway: people join several waitlists and some would not have
-# converted. A stated judgement call, not a measurement — exactly the
-# number a reviewer should push on, and the honest answer is "it's a
-# judgement call, and here's the sensitivity."
-WAITLIST_CONVERSION_RATE = 0.5
+# THE MECHANISM. SFO's two parallel arrival runways (28L/28R) sit about
+# 750 ft apart — computed, not looked up: app/runway_geometry.py measures
+# 746.8 ft from OurAirports' published runway-end coordinates, against a
+# published figure of 750. FAA requires 2,500 ft for even dependent
+# simultaneous approaches and 4,300 ft for independent ones, so when the
+# marine layer drops the ceiling, SFO's two arrival streams collapse into
+# ONE and its arrival rate roughly halves. The published schedule does
+# not halve. That gap — demand that exists, was scheduled, and physically
+# could not be flown — is the unmet demand, and no amount of terminal
+# construction fixes it.
+#
+# The same computation runs on all 515 airports, which is what makes this
+# a model rather than a fact about SFO with arithmetic wrapped round it.
+# It independently recovers things nobody told it: Denver, deliberately
+# built with runways 2,510+ ft apart, shows ZERO weather degradation;
+# Seattle, whose 16C/16L are 738 ft apart, shows 0.67.
 
-# Utilization at or above which the entity is treated as
-# capacity-constrained, meaning observed demand is suppressed BY the
-# constraint and turnaway/waitlist signals become credible evidence of
-# latent demand.
+# Practical annual enplanements one arrival stream can sustain. NOT
+# invented — it is the 95th percentile of enplanements-per-arrival-stream
+# actually achieved across the 144 eligible airports (measured
+# 2026-08-18), i.e. "what a very well-utilized comparable airport really
+# does," not a theoretical throughput.
+#
+# The honest caveat: the true maximum observed is San Diego at 12.7M on a
+# single runway — the busiest single-runway commercial airport in the US.
+# Using p95 rather than that maximum is a deliberate conservatism, and it
+# means this model UNDERSTATES how much traffic a constrained airport
+# could theoretically absorb. Stated because the estimate moves roughly
+# linearly with this constant, so it is the first number to push on.
+PRACTICAL_CAPACITY_PER_ARRIVAL_STREAM = 7_800_000.0
+
+# Fraction of the year an airport is in instrument meteorological
+# conditions, i.e. ceiling/visibility low enough that the parallel-runway
+# separation rules above start binding.
+#
+# THIS IS THE MODEL'S WEAKEST INPUT and it is stated first for that
+# reason. It is a single national figure applied uniformly, when the real
+# rate is intensely local — SFO's summer marine layer is a daily
+# morning event, Phoenix is near-permanently clear. Doing this properly
+# means historical METAR ceiling/visibility per airport (aviationweather.gov
+# publishes it, keylessly) and is the single highest-value upgrade to
+# this model. Not built here for time; see ASSUMPTIONS.md.
+IMC_FRACTION = 0.12
+
+# Utilization at or above which an airport is treated as
+# capacity-constrained, meaning observed traffic is being suppressed BY
+# the constraint rather than merely sitting below it.
 CAPACITY_CONSTRAINED_UTILIZATION = 0.85
 
 
 def estimate_unmet_demand(
-    served_units: float,
-    capacity_units: float,
-    turnaways: float,
-    waitlist: float,
+    enplanements: float,
+    arrival_streams_vmc: int,
+    weather_capacity_degradation: float,
+    traffic_growth: float,
+    regional_demand_growth: float,
 ) -> DerivedMetricResult:
-    """Model demand that exists but was not served — present in no dataset
-    by construction, since nobody records the customers they never saw.
+    """Model passenger demand that exists but cannot be flown.
 
-    Model: unmet = turnaways + (waitlist * WAITLIST_CONVERSION_RATE),
-    reported alongside utilization, which is what makes the number
-    *credible* rather than merely arithmetic.
+    Unmet demand appears in no dataset by construction: nobody records the
+    passenger who was never scheduled, or the flight that was never filed
+    because the slot does not exist. It has to be modelled from observable
+    proxies, with the assumptions travelling attached to the number.
 
-    THE OBJECTION TO HAVE AN ANSWER FOR — "how do you know that's unmet
-    demand and not just a capacity ceiling?" They are not rival theories;
-    they're the same phenomenon from two sides. A capacity ceiling is the
-    CAUSE, unmet demand the EFFECT measured through it. That's exactly
-    why utilization gates confidence:
+    Two additive terms, each with its own mechanism:
 
-      - Utilization >= CAPACITY_CONSTRAINED_UTILIZATION: turnaways are
-        consistent with a binding capacity limit, so the estimate is
-        credible and the honest framing is "demand capacity could not
-        absorb" — the ceiling is the mechanism, not a competing story.
-      - Utilization below it: turnaways happened with capacity to spare,
-        so capacity is NOT the constraint and something else is (schedule
-        mismatch, pricing, peak staffing). Same arithmetic, same number,
-        much weaker claim — confidence drops and the caveat says why.
+      1. WEATHER-SUPPRESSED THROUGHPUT. When the ceiling drops, runways
+         too close together to fly independently collapse into a single
+         arrival stream (see runway_geometry.py for the FAA thresholds).
+         Capacity falls; the schedule does not. During that fraction of
+         the year, demand above the degraded capacity cannot be flown.
+         This is SFO's entire story and it is why the answer to "why?"
+         is geometric rather than commercial.
+
+      2. STRUCTURAL CAPACITY DEFICIT. Demand projected one year forward
+         at the airport's own traffic and regional-population growth,
+         minus what its runways can sustain even in perfect weather.
+         Zero for most airports; non-zero only where the airfield is
+         genuinely undersized for its market.
+
+    Self-gating, which is what stops it being arithmetic-for-its-own-sake:
+    an airport with capacity to spare produces max(0, negative) = 0 on
+    BOTH terms. A quiet airport losing half its arrival rate in fog has
+    no unmet demand, correctly, because the remaining half still covers
+    everything that wanted to fly.
+
+    THE OBJECTION TO HAVE AN ANSWER FOR — "isn't that just a capacity
+    ceiling, not demand?" They are the same phenomenon from two sides: the
+    ceiling is the CAUSE, unmet demand the EFFECT measured through it.
+    That is exactly why utilization gates confidence rather than the
+    number: below the constrained threshold the same arithmetic yields a
+    far weaker claim, and the caveat says so.
     """
-    utilization = served_units / capacity_units if capacity_units else float("nan")
+    practical_capacity = arrival_streams_vmc * PRACTICAL_CAPACITY_PER_ARRIVAL_STREAM
+    utilization = enplanements / practical_capacity if practical_capacity else float("nan")
 
-    # Clamped at zero: a negative turnaway count is bad data, not negative
-    # demand, and must not quietly reduce the estimate.
+    # Term 1. Capacity while degraded, and the demand that exceeds it,
+    # annualized over the fraction of the year spent in those conditions.
+    degraded_capacity = practical_capacity * (1.0 - weather_capacity_degradation)
+    weather_suppressed = max(0.0, enplanements - degraded_capacity) * IMC_FRACTION
+
+    # Term 2. Growth clamped at zero in both components: a shrinking
+    # airport or a shrinking county is evidence of LESS pressure, and
+    # letting it go negative would quietly credit decline as headroom.
+    projected_demand = (
+        enplanements * (1.0 + max(0.0, traffic_growth)) * (1.0 + max(0.0, regional_demand_growth))
+    )
+    structural_deficit = max(0.0, projected_demand - practical_capacity)
+
     contributions = [
         FactorInput(
-            name="observed_turnaways",
-            magnitude=max(0.0, turnaways),
-            source_field="turnaways",
+            name="weather_suppressed_throughput",
+            magnitude=weather_suppressed,
+            source_field="min_parallel_separation_ft",
             explanation=(
-                "Requests explicitly refused or unfulfilled. Counted at full weight — "
-                "a turnaway is demand that presented itself and was measured, not inferred."
+                f"Arrival capacity falls {weather_capacity_degradation:.0%} in low visibility "
+                f"because of parallel-runway separation, applied over the {IMC_FRACTION:.0%} of "
+                "the year assumed to be instrument conditions. Demand above the degraded rate "
+                "in those periods cannot be flown. A physical airfield constraint — terminal "
+                "construction does not change it."
             ),
         ),
         FactorInput(
-            name="waitlist_converted",
-            magnitude=max(0.0, waitlist) * WAITLIST_CONVERSION_RATE,
-            source_field="waitlist",
+            name="structural_capacity_deficit",
+            magnitude=structural_deficit,
+            source_field="enplanements_cy2025_prelim",
             explanation=(
-                f"Waitlist entries discounted by WAITLIST_CONVERSION_RATE="
-                f"{WAITLIST_CONVERSION_RATE}. Weaker evidence than a turnaway: people join "
-                "multiple waitlists and some would not have converted, so counting them at "
-                "full weight would overstate."
+                f"Demand projected one year forward at this airport's own traffic growth "
+                f"({traffic_growth:+.1%}) and county population growth "
+                f"({regional_demand_growth:+.2%}), minus what {arrival_streams_vmc} arrival "
+                "stream(s) can sustain in good weather. Zero unless the airfield is undersized "
+                "for its market even before weather is considered."
             ),
         ),
     ]
 
     # NaN-safe: an unknown utilization must not read as "constrained".
-    capacity_constrained = utilization == utilization and utilization >= CAPACITY_CONSTRAINED_UTILIZATION
+    capacity_constrained = (
+        utilization == utilization and utilization >= CAPACITY_CONSTRAINED_UTILIZATION
+    )
+    weather_exposed = weather_capacity_degradation > 0 and weather_suppressed > 0
 
-    if capacity_constrained:
+    if capacity_constrained or weather_exposed:
         confidence = "medium"
         caveat = (
-            f"Utilization is {utilization:.0%}, at or above the "
-            f"{CAPACITY_CONSTRAINED_UTILIZATION:.0%} threshold where capacity plausibly binds, "
-            "so turnaways are consistent with demand that capacity could not absorb. The "
-            "capacity ceiling is the mechanism producing this number, not a competing "
-            "explanation for it. Not a measurement of true latent demand: anyone who never "
-            "attempted a request because the constraint is well known is invisible here, so "
-            "this is a LOWER BOUND."
+            f"Utilization is {utilization:.0%} of modelled good-weather capacity"
+            + (
+                f", and arrival capacity drops {weather_capacity_degradation:.0%} in low "
+                "visibility because the parallel runways are too close together to fly "
+                "independently. The runway geometry is the mechanism producing this number, "
+                "not a competing explanation for it. "
+                if weather_exposed
+                else ". "
+            )
+            + "This is a LOWER BOUND: demand that was never scheduled because the constraint "
+            "is well known to airlines is invisible here, and so is every passenger who drove "
+            "to a competing airport instead."
         )
     else:
         confidence = "low"
         caveat = (
-            f"Utilization is only {utilization:.0%}, BELOW the "
-            f"{CAPACITY_CONSTRAINED_UTILIZATION:.0%} capacity-constrained threshold. Turnaways "
-            "occurred with capacity to spare, so capacity is not the binding constraint and "
-            "this figure should not be read as 'demand we could serve by expanding.' A "
-            "schedule/peak mismatch, pricing, or staffing is the more likely cause. Same "
-            "arithmetic, much weaker claim."
+            f"Utilization is only {utilization:.0%} of modelled good-weather capacity, below "
+            f"the {CAPACITY_CONSTRAINED_UTILIZATION:.0%} threshold where the airfield plausibly "
+            "binds. Capacity is not this airport's constraint, so this figure should not be "
+            "read as 'traffic we could win by expanding' — route economics, airline network "
+            "decisions or catchment size are the more likely limits. Same arithmetic, much "
+            "weaker claim."
         )
 
     return build_derived_metric(
         metric="unmet_demand",
-        unit="units",
+        unit="annual enplanements",
         contributions=contributions,
         assumptions=(
-            f"Waitlist entries converted at {WAITLIST_CONVERSION_RATE:.0%}; a judgement call, "
-            "not a measured conversion rate, and the estimate moves roughly linearly with it.",
-            "Turnaways and waitlist entries are assumed to be distinct populations. If the "
-            "source system waitlists everyone it turns away, this double-counts.",
-            "Demand suppressed before it was ever expressed is not captured, so the figure is "
-            "a lower bound on true unmet demand.",
+            f"One arrival stream sustains {PRACTICAL_CAPACITY_PER_ARRIVAL_STREAM:,.0f} annual "
+            "enplanements — the 95th percentile actually achieved across the 144 eligible "
+            "airports, not a theoretical rate. The estimate moves roughly linearly with it.",
+            f"Instrument conditions are assumed to occur {IMC_FRACTION:.0%} of the year, "
+            "uniformly at every airport. This is the weakest input in the model: the real rate "
+            "is intensely local (SFO's summer marine layer vs. Phoenix). Per-airport METAR "
+            "history would fix it.",
+            "Arrival streams are counted from runway geometry alone. Crossing-runway conflicts, "
+            "wake-turbulence spacing, noise curfews and terrain-driven approach restrictions all "
+            "reduce real capacity further, so good-weather capacity here is an UPPER bound — "
+            "which makes the unmet-demand figure a lower bound.",
+            "Demand is projected one year forward. Growth is clamped at zero, so a declining "
+            "airport is never credited with negative unmet demand.",
         ),
         confidence=confidence,
         caveat=caveat,
@@ -636,15 +926,32 @@ def estimate_unmet_demand(
 def estimate_derived_metric(item_id: str) -> dict[str, Any]:
     """A modelled quantity plus the factors that produced it. The number
     never travels without its assumptions, confidence, and caveat."""
-    if item_id not in _MOCK_DEMAND_INPUTS:
-        raise UnknownItemError(f"unknown item_id={item_id!r}; known ids: {list(_MOCK_DEMAND_INPUTS)}")
+    if item_id not in dataset.AIRPORTS:
+        raise _unknown_airport(item_id)
 
-    inputs = _MOCK_DEMAND_INPUTS[item_id]
+    airport = dataset.AIRPORTS[item_id]
+    inputs = {
+        "enplanements": float(airport.get("enplanements_cy2025_prelim") or 0.0),
+        "arrival_streams_vmc": int(airport.get("arrival_streams_vmc") or 0),
+        "arrival_streams_imc": int(airport.get("arrival_streams_imc") or 0),
+        "weather_capacity_degradation": float(airport.get("weather_capacity_degradation") or 0.0),
+        "min_parallel_separation_ft": airport.get("min_parallel_separation_ft"),
+        "traffic_growth": float(airport.get("yoy_pct_change_2025") or 0.0),
+        "regional_demand_growth": float(airport.get("county_population_cagr_recent") or 0.0),
+    }
+    if not inputs["arrival_streams_vmc"]:
+        raise UnknownItemError(
+            f"no usable runway geometry for {item_id!r} (no runway long enough for air-carrier "
+            "arrivals, or missing coordinates), so arrival capacity cannot be modelled. "
+            "The unmet-demand estimate is unavailable for this airport."
+        )
+
     result = estimate_unmet_demand(
-        served_units=inputs["served_units"],
-        capacity_units=inputs["capacity_units"],
-        turnaways=inputs["turnaways"],
-        waitlist=inputs["waitlist"],
+        enplanements=inputs["enplanements"],
+        arrival_streams_vmc=inputs["arrival_streams_vmc"],
+        weather_capacity_degradation=inputs["weather_capacity_degradation"],
+        traffic_growth=inputs["traffic_growth"],
+        regional_demand_growth=inputs["regional_demand_growth"],
     )
     return {
         "item_id": item_id,
@@ -834,10 +1141,88 @@ def weight_robustness_report(item_ids: list[str]) -> dict[str, Any]:
     }
 
 
+# ── The one genuinely live call ──────────────────────────────────────────
+# FAA NAS Status: free, no key, no signup, real-time. It satisfies the
+# brief's "use public APIs" requirement with an actual live request
+# rather than a static file that was fetched once.
+#
+# DELIBERATELY OUTSIDE THE SCORED PATH, and that is the interesting
+# decision. A ground stop at SNA this afternoon says exactly nothing
+# about whether SNA is worth a terminal investment over the next decade —
+# it is weather, or a runway closure, or an equipment outage. Feeding
+# transient operational status into a capital-planning score would be
+# indefensible in about ten seconds of questioning. So it is presented as
+# live operational colour alongside the ranking, never as an input to it.
+#
+# Note it returns XML, not JSON, which is why this parses rather than
+# json.loads. Kept in the standard library — adding a dependency to read
+# one small document is not worth it.
+NAS_STATUS_URL = "https://nasstatus.faa.gov/api/airport-status-information"
+NAS_STATUS_TIMEOUT_SECONDS = 6.0
+
+
+def get_live_airport_status(item_id: str) -> dict[str, Any]:
+    """Current FAA operational status: ground stops, ground delay
+    programs, closures, arrival/departure delays.
+
+    Every failure mode here returns `{"available": false, "reason": ...}`
+    rather than raising, because this tool is decoration on an answer that
+    must still work without it. A timeout on a live feed should degrade
+    the response, not fail the question — the agent loop would otherwise
+    surface a tool error for something genuinely optional.
+    """
+    if item_id not in dataset.AIRPORTS:
+        raise _unknown_airport(item_id)
+
+    try:
+        with urllib.request.urlopen(NAS_STATUS_URL, timeout=NAS_STATUS_TIMEOUT_SECONDS) as resp:
+            root = ElementTree.fromstring(resp.read())
+    except (urllib.error.URLError, ElementTree.ParseError, OSError) as exc:
+        return {
+            "item_id": item_id,
+            "available": False,
+            "reason": f"FAA NAS Status unreachable ({type(exc).__name__}). "
+                      "Report the ranking without live status rather than guessing it.",
+            "source": NAS_STATUS_URL,
+        }
+
+    events: list[dict[str, str]] = []
+    # The feed nests delay types differently per category, so rather than
+    # walking a brittle expected path, find every element carrying an
+    # airport code and keep the ones matching this airport.
+    for node in root.iter():
+        code = ""
+        for tag in ("ARPT", "IATA", "Airport"):
+            child = node.find(tag)
+            if child is not None and child.text and child.text.strip():
+                code = child.text.strip()
+                break
+        if code != item_id:
+            continue
+        reason = node.findtext("Reason") or node.findtext("reason") or ""
+        events.append({"type": node.tag, "reason": reason.strip()})
+
+    return {
+        "item_id": item_id,
+        "available": True,
+        "has_active_events": bool(events),
+        "events": events,
+        "source": NAS_STATUS_URL,
+        # Stated in the payload, not just in a comment, because the model
+        # is what has to relay it to the user.
+        "scope_note": (
+            "Live operational status only. This is NOT part of the investment score and must "
+            "not be described as if it were — a ground delay today is weather or an equipment "
+            "outage, not evidence about whether this airport is worth expanding."
+        ),
+    }
+
+
 # Dispatch table used by agent_loop.py: tool name -> callable(args_dict).
 # Kept as a plain dict, not a decorator/registry framework — this is the
 # entire "tool registry" a hand-rolled loop needs.
 TOOL_REGISTRY: dict[str, Callable[[dict[str, Any]], Any]] = {
+    "get_live_airport_status": lambda args: get_live_airport_status(item_id=args["item_id"]),
     "compare_items": lambda args: compare_items(item_ids=args["item_ids"]),
     "get_item_metrics": lambda args: get_item_metrics(item_id=args["item_id"]),
     "resolve_entity": lambda args: resolve_entity(query=args["query"]),

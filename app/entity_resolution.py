@@ -292,6 +292,21 @@ def score_pair(query: str, candidate_text: str) -> tuple[float, tuple[tuple[str,
     return blended, signals
 
 
+# Below this length a query is too short for fuzzy matching to mean
+# anything, and it must match an alias EXACTLY (case-insensitively) to
+# count.
+#
+# Found on real data, not anticipated: 'LA' scored 0.83 against Lawton,
+# Oklahoma ('LAW'), 0.79 against La Crosse and 0.73 against Lafayette,
+# because a two-character query is a prefix of all three and
+# Jaro-Winkler pays a large prefix bonus. Those are not plausible
+# readings of 'LA' — they are artifacts of the string being short. A
+# short query carries too little signal to rank on, so the honest
+# behaviour is to demand an exact hit and otherwise return nothing,
+# letting `decisive=False` route it to a clarifying question.
+MIN_FUZZY_QUERY_LENGTH = 4
+
+
 def resolve(query: str, catalog: Mapping[str, Sequence[str]], top_k: int = 5) -> ResolutionResult:
     """`catalog` maps item_id -> every text that should count as a name
     for it (its id, display name, aliases — the caller decides scope).
@@ -312,6 +327,24 @@ def resolve(query: str, catalog: Mapping[str, Sequence[str]], top_k: int = 5) ->
     never decisive by construction: an empty top-1 has no confidence to
     check.
     """
+    # Short queries: exact alias match only. See MIN_FUZZY_QUERY_LENGTH.
+    stripped = query.strip()
+    if len(stripped) < MIN_FUZZY_QUERY_LENGTH:
+        exact = [
+            EntityCandidate(
+                item_id=item_id,
+                matched_text=text,
+                confidence=1.0,
+                signals=(("exact_short_query_match", 1.0),),
+            )
+            for item_id, texts in catalog.items()
+            for text in texts
+            if text.casefold() == stripped.casefold()
+        ]
+        exact.sort(key=lambda c: c.item_id)
+        top_exact = tuple(exact[:top_k])
+        return ResolutionResult(query=query, candidates=top_exact, decisive=len(top_exact) == 1)
+
     scored: list[EntityCandidate] = []
     for item_id, texts in catalog.items():
         best: EntityCandidate | None = None

@@ -862,3 +862,54 @@ actually need, and where each comes from:
   DEFAULT_CRITERIA, percentages sum to 100, every criterion has a description, registry dispatch with
   {}); 190 passed. Verified against the live server on real gpt-4o-mini with the exact original
   prompt — it now calls list_criteria and states 25/25/20/15/15 instead of refusing.
+
+## Two bugs found using the shipped agent, both fixed
+
+- **[23:50] `resolve_entity` returned zero candidates for a one-letter transposition of a real code
+  ("LBG" for Long Beach's real "LGB"), asking "compare LAX and LBG."** Found by hand, not by an eval
+  task — screenshotted `resolve_entity({"query":"LBG"})` coming back with an empty candidate list.
+  Root cause was two-layered, and the fix had to address both:
+  `entity_resolution.py`'s `MIN_FUZZY_QUERY_LENGTH = 4` forces every query under 4 characters into
+  exact-match-only mode, so a 3-letter IATA code — the single most natural query shape for this
+  domain — never reaches the Jaro-Winkler/Soundex machinery at all. And even bypassing that gate,
+  `score_pair("LBG", "LGB")` only scores 0.48 (below the 0.63 surfacing floor): Jaro's match-window
+  formula (`max(len1,len2)//2 - 1`) collapses to 0 at length 3, so the sliding-window matcher can't
+  see past same-index characters and can't detect the transposition as a transposition.
+  Rejected the two broader fixes (lowering `MIN_FUZZY_QUERY_LENGTH` outright, or reweighting the
+  blend) because both reopen the exact false-positive `MIN_FUZZY_QUERY_LENGTH` was added to prevent —
+  the documented "LA" case, where a short query's prefix bonus falsely favours "Lawton"/"La Crosse"/
+  "Lafayette" over the real match. Fixed narrowly instead: added a restricted edit-distance
+  (Damerau-Levenshtein, optimal-string-alignment — handles adjacent transpositions as a single edit)
+  fallback that only fires when a short query is *code-shaped* (3-4 characters, one token,
+  alphanumeric) and only compares it against catalog aliases that are *also* code-shaped. The
+  code-vs-name split isn't a heuristic guess — checked it against the real catalog first
+  (`ENTITY_CATALOG`): 570 short single-token aliases split cleanly into 552 upper-case real codes and
+  18 non-upper-case short city names ("Reno," "Waco," "Elko," "Nome"...), so requiring the alias be
+  upper-case excludes exactly the false-positive class without the generic resolver needing any
+  airport-specific knowledge of which alias column a string came from. A candidate at edit-distance 1
+  gets a fixed confidence (0.80) — high enough to auto-resolve through the existing decisive bar
+  (>=0.75 confidence, >=0.15 gap) when it's the only close code, but the existing gap check still
+  correctly keeps it non-decisive when a typo is genuinely ambiguous (e.g. "ABX" is one edit from
+  both a fictitious "ABC" and "ABD" in the test catalog — surfaces both, asks rather than guesses,
+  same "LA" pattern the module already handles elsewhere). "LBG" now resolves to LGB decisively;
+  real near-miss cases with more than one same-distance real code (there are several in the true
+  50-state catalog) correctly come back non-decisive with all of them listed. 6 new tests added to
+  `test_entity_resolution.py`, including a direct regression test named for this bug and a dedicated
+  test that a short *name* alias ("Reno") is never treated as a code candidate. Full suite: 196
+  passed (190 prior + 6 new).
+
+- **[23:50] Voice mic input ended the utterance after well under a second of silence.** Chrome's
+  built-in `SpeechRecognition` endpointing is aggressive, and the Web Speech API exposes no property
+  to tune its silence threshold directly — `recognition.continuous = false` (the prior setting) meant
+  the browser's own internal VAD decided when speech had "ended" and fired `onresult` with
+  `isFinal = true` immediately after, sending the message before a normal speaking pause finished.
+  Fixed with the standard workaround for this API's limitation: `continuous = true` so the browser
+  never auto-ends the session on a brief pause, plus a manual silence timer
+  (`SILENCE_TIMEOUT_MS = 1500`) that resets on every `onresult` (interim or final) and only calls
+  `recognition.stop()` once nothing new has arrived for that long; `stop()` flushes the final
+  transcript before `onend` fires, and `onend` is now what triggers `send()` (moved off the
+  `isFinal`-in-`onresult` check, which fired far too early under `continuous`). One tunable constant,
+  easy to retune later if 1.5s still feels off in practice. Verified the app boots clean against it
+  (no console errors, `startRecognition` intact) on the live `LLM_PROVIDER=mock` server; real
+  mic-timing feel isn't something a headless browser can verify — that's Roi's own mic, same
+  limitation as the original voice build.

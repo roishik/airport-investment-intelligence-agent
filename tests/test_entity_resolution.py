@@ -21,6 +21,17 @@ CATALOG = {
     "option_c": ["option_c", "Option C", "Charlie", "the charlie option"],
 }
 
+# For the short-code edit-distance fallback: upper-case 3-letter codes plus
+# a lower-case short name, mirroring the real catalog's split between
+# locid/iata_code aliases (always upper-case) and municipality-derived
+# aliases that happen to be short (never upper-case).
+CODE_CATALOG = {
+    "item_lgb": ["LGB", "Long Beach Airport"],
+    "item_abc": ["ABC", "Alphabet Field"],
+    "item_abd": ["ABD", "Alphabet Downtown"],
+    "item_reno": ["Reno", "Reno Municipal Airport"],
+}
+
 
 # ── Jaro / Jaro-Winkler ──────────────────────────────────────────────────
 def test_jaro_identical_strings_is_one():
@@ -223,3 +234,59 @@ def test_resolve_skips_entries_with_no_names():
     catalog = {"option_a": ["Alpha"], "option_broken": []}
     result = resolve("Alpha", catalog)
     assert [c.item_id for c in result.candidates] == ["option_a"]
+
+
+# ── short-code edit-distance fallback ────────────────────────────────────
+# Real bug found using the live agent (2026-08-18): 'LBG', a one-letter
+# transposition of the real code 'LGB' (Long Beach), returned zero
+# candidates. Below MIN_FUZZY_QUERY_LENGTH, short queries were exact-match
+# only, so the Jaro-Winkler/Soundex machinery never even ran. These lock in
+# the narrow fix: codes (not names) within one edit of a short query are
+# still worth surfacing.
+def test_resolve_transposed_code_matches_when_unambiguous():
+    """The bug report itself: a single adjacent-letter swap of a real code,
+    with nothing else in the catalog one edit away, resolves decisively —
+    a typo'd code should behave like a correct one."""
+    result = resolve("LBG", CODE_CATALOG)
+    assert result.decisive is True
+    assert result.candidates[0].item_id == "item_lgb"
+    assert result.candidates[0].matched_text == "LGB"
+
+
+def test_resolve_code_typo_is_case_insensitive():
+    result = resolve("lbg", CODE_CATALOG)
+    assert result.decisive is True
+    assert result.candidates[0].item_id == "item_lgb"
+
+
+def test_resolve_code_typo_with_two_equally_close_codes_is_not_decisive():
+    """'ABX' is one edit from both ABC and ABD — genuinely ambiguous, same
+    as the 'LA' case elsewhere in this file. Surfaced, not acted on."""
+    result = resolve("ABX", CODE_CATALOG)
+    assert result.decisive is False
+    assert {c.item_id for c in result.candidates} == {"item_abc", "item_abd"}
+
+
+def test_resolve_code_two_edits_away_is_not_surfaced():
+    result = resolve("ZZZ", CODE_CATALOG)
+    assert result.candidates == ()
+    assert result.decisive is False
+
+
+def test_resolve_short_name_is_not_treated_as_a_code():
+    """'Reno' is a short alias but a municipality name, not a code (it
+    isn't upper-case in the catalog). 'ren' — one edit away by simple
+    string distance — must NOT match it; only genuine codes participate in
+    the short-query fallback, or short city names would start colliding
+    with unrelated codes the way 'LA' once did with Lawton/La Crosse."""
+    result = resolve("ren", CODE_CATALOG)
+    assert result.candidates == ()
+    assert result.decisive is False
+
+
+def test_resolve_short_non_code_shaped_query_still_returns_nothing():
+    """A short query that isn't code-shaped (has a space) skips the
+    fallback entirely rather than fuzzy-matching against codes."""
+    result = resolve("a b", CODE_CATALOG)
+    assert result.candidates == ()
+    assert result.decisive is False

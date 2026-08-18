@@ -306,6 +306,67 @@ def score_pair(query: str, candidate_text: str) -> tuple[float, tuple[tuple[str,
 # letting `decisive=False` route it to a clarifying question.
 MIN_FUZZY_QUERY_LENGTH = 4
 
+# Short, fixed-length domain codes (IATA/FAA LocID) get a narrow exception
+# to the exact-match-only rule above. A single-letter typo or adjacent-
+# letter swap in a 3-4 character code ('LBG' for the real 'LGB') is a
+# common, plausible query, and — restricted to comparing codes against
+# other codes, never against names — catching it does not reopen the "LA"
+# vs Lawton/La Crosse problem MIN_FUZZY_QUERY_LENGTH exists to stop: that
+# problem came from a short query's prefix matching deep into a much
+# longer multi-word name, which can't happen when both sides are capped at
+# 4 characters.
+MAX_CODE_EDIT_DISTANCE = 1
+
+# A code exactly one edit from the query is about as clean a signal as
+# fuzzy matching gets for a fixed-length identifier convention — high
+# enough to clear DECISIVE_MIN_CONFIDENCE on its own when nothing else is
+# close, so a typo'd code resolves the same way a correct one does.
+_CODE_EDIT_CONFIDENCE = 0.80
+
+
+def _is_code_query_shaped(text: str) -> bool:
+    """3-4 characters, one token, letters/digits only — the shape of an
+    IATA code or FAA LocID as a user would type it, case regardless (people
+    don't bother capitalizing codes)."""
+    return 3 <= len(text) <= 4 and " " not in text and text.isalnum()
+
+
+def _is_code_alias(text: str) -> bool:
+    """Catalog aliases that are actually codes, not names that happen to be
+    short. Codes come straight from the locid/iata_code columns and are
+    conventionally upper-case; names and municipalities are not (real data
+    check: 552/570 short single-token aliases are upper-case codes, the
+    other 18 are city names like 'Reno' and 'Waco'). Requiring upper-case
+    excludes those names from the code-only comparison pool without this
+    generic resolver needing any airport-specific knowledge of which alias
+    came from which column."""
+    return 3 <= len(text) <= 4 and " " not in text and text.isalnum() and text.isupper()
+
+
+def _restricted_edit_distance(a: str, b: str) -> int:
+    """Damerau-Levenshtein distance, optimal-string-alignment variant:
+    insertion, deletion, substitution, or one transposition of two adjacent
+    characters, each cost 1. Full-matrix DP — callers only ever pass
+    4-character-or-shorter codes, so there's no performance reason to trim
+    it further."""
+    len_a, len_b = len(a), len(b)
+    d = [[0] * (len_b + 1) for _ in range(len_a + 1)]
+    for i in range(len_a + 1):
+        d[i][0] = i
+    for j in range(len_b + 1):
+        d[0][j] = j
+    for i in range(1, len_a + 1):
+        for j in range(1, len_b + 1):
+            cost = 0 if a[i - 1] == b[j - 1] else 1
+            d[i][j] = min(
+                d[i - 1][j] + 1,  # deletion
+                d[i][j - 1] + 1,  # insertion
+                d[i - 1][j - 1] + cost,  # substitution
+            )
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)  # transposition
+    return d[len_a][len_b]
+
 
 def resolve(query: str, catalog: Mapping[str, Sequence[str]], top_k: int = 5) -> ResolutionResult:
     """`catalog` maps item_id -> every text that should count as a name
@@ -341,9 +402,48 @@ def resolve(query: str, catalog: Mapping[str, Sequence[str]], top_k: int = 5) ->
             for text in texts
             if text.casefold() == stripped.casefold()
         ]
-        exact.sort(key=lambda c: c.item_id)
-        top_exact = tuple(exact[:top_k])
-        return ResolutionResult(query=query, candidates=top_exact, decisive=len(top_exact) == 1)
+        if exact:
+            exact.sort(key=lambda c: c.item_id)
+            top_exact = tuple(exact[:top_k])
+            return ResolutionResult(query=query, candidates=top_exact, decisive=len(top_exact) == 1)
+
+        if not _is_code_query_shaped(stripped):
+            return ResolutionResult(query=query, candidates=(), decisive=False)
+
+        # No exact hit, but the query looks like a code. See
+        # MAX_CODE_EDIT_DISTANCE for why a one-edit near match is still
+        # worth surfacing.
+        normalized_query = stripped.casefold()
+        near: list[EntityCandidate] = []
+        for item_id, texts in catalog.items():
+            best: EntityCandidate | None = None
+            for text in texts:
+                if not _is_code_alias(text):
+                    continue
+                distance = _restricted_edit_distance(normalized_query, text.casefold())
+                if distance > MAX_CODE_EDIT_DISTANCE:
+                    continue
+                if best is None or _CODE_EDIT_CONFIDENCE > best.confidence:
+                    best = EntityCandidate(
+                        item_id=item_id,
+                        matched_text=text,
+                        confidence=_CODE_EDIT_CONFIDENCE,
+                        signals=(("code_edit_distance", float(distance)),),
+                    )
+            if best is not None:
+                near.append(best)
+
+        near.sort(key=lambda c: (-c.confidence, c.item_id))
+        top_near: tuple[EntityCandidate, ...] = tuple(near[:top_k])
+        if len(top_near) == 0:
+            decisive = False
+        else:
+            runner_up = top_near[1].confidence if len(top_near) > 1 else 0.0
+            decisive = (
+                top_near[0].confidence >= DECISIVE_MIN_CONFIDENCE
+                and (top_near[0].confidence - runner_up) >= DECISIVE_MIN_GAP
+            )
+        return ResolutionResult(query=query, candidates=top_near, decisive=decisive)
 
     scored: list[EntityCandidate] = []
     for item_id, texts in catalog.items():

@@ -370,6 +370,16 @@ const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRec
 let recognition = null;
 let recognizing = false;
 let voiceRepliesOn = false;
+let silenceTimer = null;
+
+// Chrome's own SpeechRecognition endpointing fires isFinal after well
+// under a second of silence — too fast for a normal speaking pause, and
+// the Web Speech API exposes no property to tune it directly. The
+// workaround: run in continuous mode (so the browser never auto-ends the
+// session on a brief pause) and do our own silence detection — reset this
+// timer on every result, real or interim, and only treat the utterance as
+// finished once nothing new has arrived for this long.
+const SILENCE_TIMEOUT_MS = 1500;
 
 if (!SpeechRecognitionCtor) {
   micBtn.disabled = true;
@@ -385,7 +395,7 @@ function startRecognition() {
   recognition = new SpeechRecognitionCtor();
   recognition.lang = 'en-US';
   recognition.interimResults = true;
-  recognition.continuous = false;
+  recognition.continuous = true;
 
   recognition.onstart = () => {
     recognizing = true;
@@ -397,17 +407,20 @@ function startRecognition() {
     let transcript = '';
     for (let i = 0; i < event.results.length; i++) transcript += event.results[i][0].transcript;
     inputEl.value = transcript;
-    if (event.results[event.results.length - 1].isFinal) send();
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => recognition.stop(), SILENCE_TIMEOUT_MS);
   };
   recognition.onerror = (event) => {
     statusEl.textContent = event.error === 'not-allowed' ? 'microphone permission denied' : `mic error: ${event.error}`;
     statusEl.classList.add('status-error');
   };
   recognition.onend = () => {
+    clearTimeout(silenceTimer);
     recognizing = false;
     micBtn.classList.remove('recording');
     micBtn.textContent = '● Speak';
     loadHealth();
+    if (inputEl.value.trim()) send();
   };
   recognition.start();
 }

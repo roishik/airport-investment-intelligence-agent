@@ -26,6 +26,7 @@ imports below it.
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import sys
 from datetime import datetime, timezone
@@ -42,6 +43,13 @@ def main() -> None:
     parser.add_argument("--trials", type=int, default=None, help="Override every task's num_trials.")
     parser.add_argument("--out-dir", default=str(Path(__file__).resolve().parent / "results"))
     parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Log the exact rendered prompt sent to the LLM judge for every LLMJudgeGrader call "
+        "(evals/graders/llm_judge.py's logger.debug line) to stderr.",
+    )
+    parser.add_argument(
         "--compare",
         default=None,
         metavar="PRIOR_RUN.json",
@@ -51,6 +59,9 @@ def main() -> None:
         "different 82%%s.",
     )
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG, format="%(name)s: %(message)s")
 
     # MUST happen before any app.*/evals.* import — see module docstring.
     if args.provider:

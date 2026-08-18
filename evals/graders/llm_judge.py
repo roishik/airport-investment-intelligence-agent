@@ -26,11 +26,14 @@ until you've read that report.
 """
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Callable
 
 from app.config import have_openai_key
 from evals.types import GradeResult, Grader, Outcome, Task
+
+logger = logging.getLogger("evals.llm_judge")
 
 _SCORE_RE = re.compile(r"SCORE:\s*(\d+)", re.I)
 _RATIONALE_RE = re.compile(r"RATIONALE:\s*(.+)", re.I | re.S)
@@ -271,6 +274,7 @@ class LLMJudgeGrader(Grader):
         except KeyError as exc:
             return GradeResult(self.name, 0.0, False, f"rubric template missing context key {exc}", {"error": str(exc)})
 
+        logger.debug("judge prompt [%s / task=%s]:\n%s", self.name, task.id, prompt)
         score10, rationale = judge_text(provider, prompt)
         if score10 is None:
             return GradeResult(self.name, 0.0, False, f"could not parse judge response ({rationale!r})", {"skipped": False})

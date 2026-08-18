@@ -127,7 +127,53 @@ TASKS: list[Task] = [
             ScoringMatchesGroundTruthGrader(),
             NoFabricatedNumbersGrader(),
         ),
-        notes="Multi-turn: history is prepended fresh for this one trial only (isolation — see evals/runner.py).",
+        notes="Multi-turn: history is prepended fresh for this one trial only (isolation — see evals/runner.py). "
+        "CAVEAT: the follow-up message itself already names both remaining airports ('LAX and SNA'), so a "
+        "provider that ignores history entirely could still pass by parsing this turn alone — it does not, by "
+        "itself, prove history was actually read. See the two tasks below for follow-ups that name NO ids.",
+    ),
+    Task(
+        id="correctness_followup_refers_to_prior_turn_by_description_not_id",
+        category="correctness",
+        description="Follow-up drops an airport by description ('whichever came in last'), not by id — only resolvable from prior-turn history.",
+        user_message="OK, drop whichever one came in last — how do the other two compare?",
+        history=(
+            {"role": "user", "content": "Compare LAX, SNA, and BOS overall."},
+            {"role": "assistant", "content": "Based on the comparison, BOS ranks first, LAX second, and SNA third."},
+        ),
+        graders=(
+            tool_was_called("compare_items"),
+            ToolArgsItemIdsGrader("compare_items", {"BOS", "LAX"}, mode="exact"),
+            ScoringMatchesGroundTruthGrader(),
+            NoFabricatedNumbersGrader(),
+        ),
+        notes="Stronger multi-turn check than the task above: this follow-up names NO airport ids at all, so "
+        "passing REQUIRES reading history, not just parsing the current message. KNOWN MOCK LIMITATION: "
+        "MockLLMProvider's tool-call regex only reads the last user message (see its module docstring) and "
+        "would find zero ids here, falling back to the full 4-airport default set — EXPECTED to fail under "
+        "LLM_PROVIDER=mock. Meaningful only under a real provider.",
+    ),
+    Task(
+        id="correctness_followup_corrects_prior_turn_entity",
+        category="correctness",
+        description="User corrects a wrong airport named in the prior turn — does the agent use the CORRECTED id going forward, not keep re-comparing the stale one?",
+        user_message="Sorry, I meant ORD, not OKC — redo that comparison.",
+        history=(
+            {"role": "user", "content": "Compare OKC and DFW for me."},
+            {"role": "assistant", "content": "Based on the comparison, DFW ranks first overall, ahead of OKC."},
+        ),
+        graders=(
+            tool_was_called("compare_items"),
+            ToolArgsItemIdsGrader("compare_items", {"ORD", "DFW"}, mode="exact"),
+            ScoringMatchesGroundTruthGrader(),
+            NoFabricatedNumbersGrader(),
+        ),
+        notes="Multi-turn correction: a real conversational agent must UPDATE its working set when corrected "
+        "('not OKC') rather than keep DFW-vs-OKC from turn 1, or drop DFW entirely and compare ORD alone. "
+        "KNOWN MOCK LIMITATION: MockLLMProvider's regex finds every valid airport id literally present in "
+        "THIS message ('ORD' and, confusingly, 'OKC' too, since it's named to explain the correction) and "
+        "never looks at history for 'DFW' — EXPECTED to fail under LLM_PROVIDER=mock. Meaningful only under "
+        "a real provider.",
     ),
     # ─────────────────────────────────────────────────────────────────
     # ambiguous (3)
@@ -201,7 +247,7 @@ TASKS: list[Task] = [
         "NoFabricatedNumbersGrader catches invented numbers; the judge rubric catches unfounded reinterpretation.",
     ),
     # ─────────────────────────────────────────────────────────────────
-    # tool-selection (2) — the deliberate path-check exception
+    # tool-selection (3) — the deliberate path-check exception
     # ─────────────────────────────────────────────────────────────────
     Task(
         id="tool_selection_explicit_comparison_must_call_tool",
@@ -233,6 +279,34 @@ TASKS: list[Task] = [
         "meaningful pass/fail. Deliberately a literal weather question, not an airport operational-status "
         "question — get_live_airport_status is a real tool now and answering THAT would be in scope; this "
         "checks the agent doesn't confuse 'weather' with its own investment-scoring job.",
+    ),
+    Task(
+        id="tool_selection_priority_carries_forward_to_new_pair",
+        category="tool-selection",
+        description="A priority stated in turn 1 (via rank_by_priorities) is not restated in turn 2 — does the agent still reach for rank_by_priorities on the new pair, or silently fall back to a plain compare_items?",
+        user_message="Nice — now do the same thing for SNA and BOS.",
+        history=(
+            {
+                "role": "user",
+                "content": "I care most about growth potential, not absolute size — compare LAX, JFK, and DFW with that in mind.",
+            },
+            {
+                "role": "assistant",
+                "content": "Applying extra weight to growth and less to absolute scale per your stated priority, "
+                "JFK comes out ahead of LAX and DFW.",
+            },
+        ),
+        graders=(
+            tool_was_called("rank_by_priorities"),
+            ToolArgsItemIdsGrader("rank_by_priorities", {"SNA", "BOS"}, mode="exact"),
+            NoFabricatedNumbersGrader(),
+        ),
+        notes="Multi-turn tool-selection check: 'the same thing' has no meaning without history — the stated "
+        "priority (growth over size) lived only in turn 1's user message, and turn 2 doesn't repeat it. A "
+        "correct agent recognizes the carried-forward priority and calls rank_by_priorities again, not a bare "
+        "compare_items. KNOWN MOCK LIMITATION: MockLLMProvider always requests compare_items and only reads "
+        "the last user message (see its module docstring) — EXPECTED to fail under LLM_PROVIDER=mock. "
+        "Meaningful only under a real provider.",
     ),
     # ─────────────────────────────────────────────────────────────────
     # self-computation (2) — "model tries to compute a number itself"

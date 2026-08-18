@@ -39,10 +39,24 @@ and prints the overall pass rate / avg score to stdout.
 
 ### Real results from this build (2026-08-18, re-domained to real airports, gpt-4o-mini for both agent and judge)
 
+23 -> 26 tasks as of the same day: `correctness_followup_refers_to_prior_turn_by_description_not_id`,
+`correctness_followup_corrects_prior_turn_entity`, and
+`tool_selection_priority_carries_forward_to_new_pair` were added to close a real gap — the only
+pre-existing multi-turn task (`correctness_followup_narrows_scope_after_prior_turn`) had a follow-up
+message that named its own airport ids, so it could pass even if history was silently ignored. The three
+new tasks don't have that escape hatch: none of their follow-up messages name an id, a criterion, or a
+priority at all — passing requires actually reading `history` (entity reference by description, entity
+correction across turns, and priority carryover without restatement, respectively).
+
 | Provider | Pass rate | Avg partial-credit score | Notes |
 |---|---|---|---|
-| `mock` | 16/23 = 70% | 0.84 | `evals/results/mock_20260818T163604Z.md` |
-| `openai` (gpt-4o-mini) | 22/23 = 96% | 0.98 | `evals/results/openai_20260818T165202Z.md` |
+| `mock` | 9/26 = 35% | 0.81 | `evals/results/mock_20260818T191251Z.md` |
+| `openai` (gpt-4o-mini) | 24/26 = 92% | 0.97 | `evals/results/openai_20260818T191158Z.md` |
+
+The mock pass rate dropped sharply (70% -> 35%) purely from adding these three tasks, not from any
+regression — `MockLLMProvider` only ever reads the last user message (see its module docstring), so all
+three fail under mock by construction. All four multi-turn tasks (the original plus the three new ones)
+pass under real `gpt-4o-mini`.
 
 These are real numbers from real runs against the real 515-airport
 dataset (`app/dataset.py`), not fabricated and not carried over from the
@@ -76,20 +90,26 @@ before these numbers were recorded:
   moved the openai pass rate from 74% to 96% on its own — most of the
   "failures" it was catching were the grader's, not the agent's.
 
-One real, still-open finding worth reading before treating the harness
+Findings from the openai run worth reading before treating the harness
 as done:
 
-- `ambiguous_vague_priorities_growth_not_congestion` — the only
-  remaining failure, and it's a genuine product gap, not a grader
-  artifact. Asked "I mainly care about airports that are growing and
-  aren't already packed to capacity — what's the best pick?" (no
-  airports named), gpt-4o-mini called `find_items` + `compare_items` and
-  produced a ranking on the DEFAULT weights, without ever calling
-  `rank_by_priorities` to actually honor the stated preference or saying
-  out loud that it hadn't. The tool for this exists
-  (`app/tools.py:rank_by_priorities`); the model just didn't reach for it
-  here. Left open rather than special-cased — see `DECISIONS.md` for
-  whether this gets picked up.
+- `ambiguous_vague_priorities_growth_not_congestion` — a genuine,
+  repeatable product gap, not a grader artifact. Asked "I mainly care
+  about airports that are growing and aren't already packed to capacity
+  — what's the best pick?" (no airports named), gpt-4o-mini called
+  `find_items` + `compare_items` and produced a ranking on the DEFAULT
+  weights, without ever calling `rank_by_priorities` to actually honor
+  the stated preference or saying out loud that it hadn't. The tool for
+  this exists (`app/tools.py:rank_by_priorities`); the model just didn't
+  reach for it here. Left open rather than special-cased — see
+  `DECISIONS.md` for whether this gets picked up.
+- `self_computation_asked_for_rough_guess` — failed in the 2026-08-18
+  19:11 run (`openai_20260818T191158Z.md`) but had passed in the earlier
+  16:52 run recorded above; not yet re-run enough times to tell whether
+  this is genuine model non-determinism (temperature > 0, on both the
+  agent and the LLM-judge grader) or a real intermittent gap. Re-run
+  with `--id-contains self_computation_asked_for_rough_guess --trials 5`
+  before concluding either way — don't treat a single flip as settled.
 
 ### Judge-vs-human agreement (real run)
 

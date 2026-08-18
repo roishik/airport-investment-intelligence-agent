@@ -303,3 +303,109 @@ class NeverFinishesProviderForHookTest:
             provider=self.name,
             model=self.model,
         )
+
+
+# ── Multi-turn: does run_agent actually thread `history` into what the
+# provider sees, correctly and without corrupting the caller's state?
+# These are deterministic checks on agent_loop.py's own message-assembly
+# logic — they do NOT (and can't, with a scripted provider) prove a real
+# LLM makes good USE of the history; that's what evals/tasks/seed_tasks.py's
+# multi-turn Tasks are for, run against a real provider.
+
+
+def test_run_agent_threads_history_between_system_prompt_and_new_message():
+    """messages sent to the provider must be, in order: [system, *history,
+    new user message] — not history dropped, not history reordered, not
+    the new message spliced in early."""
+    captured: list[list[dict[str, Any]]] = []
+
+    class CapturingProvider:
+        name, model = "capturing", "test"
+
+        def chat(self, messages, tools=None):
+            captured.append(list(messages))
+            return LLMResponse(content="ok", tool_calls=(), provider=self.name, model=self.model)
+
+    history = [
+        {"role": "user", "content": "Compare LAX and SNA."},
+        {"role": "assistant", "content": "LAX ranks first."},
+    ]
+    run_agent(
+        user_message="And what about BOS?",
+        history=history,
+        provider=CapturingProvider(),
+        tool_schemas=TOOL_SCHEMAS,
+        tool_registry=TOOL_REGISTRY,
+        system_prompt=BASE_SYSTEM_PROMPT,
+    )
+    sent = captured[0]
+    assert sent[0] == {"role": "system", "content": BASE_SYSTEM_PROMPT}
+    assert sent[1] == history[0]
+    assert sent[2] == history[1]
+    assert sent[3] == {"role": "user", "content": "And what about BOS?"}
+
+
+def test_run_agent_does_not_mutate_the_caller_supplied_history_list():
+    """app/cli.py and app/main.py both keep a single mutable `history` list
+    across turns and hand it to run_agent() each call — if run_agent ever
+    mutated it in place (instead of only reading it), a later turn's state
+    could leak backward into an earlier one. Guard the invariant directly."""
+    provider = MockLLMProvider()
+    history = [
+        {"role": "user", "content": "Compare LAX and SNA."},
+        {"role": "assistant", "content": "LAX ranks first."},
+    ]
+    history_copy = [dict(m) for m in history]
+
+    run_agent(
+        user_message="Now add BOS to that comparison.",
+        history=history,
+        provider=provider,
+        tool_schemas=TOOL_SCHEMAS,
+        tool_registry=TOOL_REGISTRY,
+        system_prompt=BASE_SYSTEM_PROMPT,
+    )
+    assert history == history_copy
+
+
+def test_two_turn_conversation_round_trips_through_result_messages():
+    """Mirrors the actual production pattern (app/cli.py, app/main.py):
+    turn 2's history is `turn_1_result.messages[1:]` (system message
+    stripped, since run_agent re-adds its own). Confirms that pattern
+    actually carries turn 1's user/assistant/tool messages into turn 2's
+    provider call, in order, rather than silently losing them."""
+    provider = MockLLMProvider()
+    turn_1 = run_agent(
+        user_message="compare LAX and SNA for me",
+        history=[],
+        provider=provider,
+        tool_schemas=TOOL_SCHEMAS,
+        tool_registry=TOOL_REGISTRY,
+        system_prompt=BASE_SYSTEM_PROMPT,
+    )
+    history_for_turn_2 = turn_1.messages[1:]  # drop the system message, as cli.py/main.py do
+
+    captured: list[list[dict[str, Any]]] = []
+
+    class CapturingProvider:
+        name, model = "capturing-turn-2", "test"
+
+        def chat(self, messages, tools=None):
+            captured.append(list(messages))
+            return LLMResponse(content="ok", tool_calls=(), provider=self.name, model=self.model)
+
+    run_agent(
+        user_message="now add BOS to that",
+        history=history_for_turn_2,
+        provider=CapturingProvider(),
+        tool_schemas=TOOL_SCHEMAS,
+        tool_registry=TOOL_REGISTRY,
+        system_prompt=BASE_SYSTEM_PROMPT,
+    )
+    sent = captured[0]
+    assert sent[0] == {"role": "system", "content": BASE_SYSTEM_PROMPT}
+    # everything turn 1 produced (its user msg, tool-call request, tool
+    # result, final answer) must be present, in order, before turn 2's
+    # own new user message.
+    assert sent[1:-1] == turn_1.messages[1:]
+    assert sent[-1] == {"role": "user", "content": "now add BOS to that"}

@@ -1348,3 +1348,54 @@ Fixed on `main` first, then merged to `deploy`.
   tasks and none exercises a group-filter question, which is why this survived to submission — the eval
   harness graded what it had, and this was outside it. Adding a task now would be writing the test after
   seeing the answer; it is recorded here as the honest next item instead.
+
+## Post-submission: barge-in lost the first syllable of every interruption
+
+- **[2026-08-19 ~16:30 IDT] Interrupting the agent reliably ate the start of the sentence, while ordinary
+  spoken turns were fine. Two constants had drifted out of a relationship nothing enforced.**
+  Reported by Roi from real use of conversation mode on the deployed instance, then located by reading
+  the constants rather than by guessing: `preRollMs` was **300** and `bargeInMinMs` is **350**.
+
+  `_bargeIn()` seeds the next utterance from the pre-roll ring buffer, and its comment claims "the
+  pre-roll already holds its opening syllables." That claim was false by construction: barge-in only
+  fires *after* 350ms of sustained above-gate speech, so 350ms of audio had already elapsed, and the
+  buffer only retained the last 300. The opening was evicted before it could be copied.
+
+  **The asymmetry is what identifies the bug.** A normal turn opens the gate after `speechMinMs` (200),
+  which 300ms of pre-roll covered with 100ms to spare — so the defect was invisible everywhere except
+  barge-in, which is exactly what was observed.
+
+  The margin needed is larger than the bare 350−300=50ms. While the agent is speaking the gate also
+  requires `bargeInThresholdBoostDb` (+6dB) on top, and any frame below it resets `aboveGateMs` to zero,
+  so a quiet onset consonant pushes real elapsed time well past `bargeInMinMs`. Set to **500ms**, which
+  carries that slack. Cost is ~6KB of extra 16kHz mono audio per utterance — nothing.
+
+  **A second latent defect in the same cluster, found by the tests rather than by the report:**
+  `minUtteranceMs` (350) was *greater* than the old `preRollMs` (300), so a short but genuine barge-in
+  ("wait", "no") could be discarded as a door-slam before ever reaching the transcriber. The same change
+  fixes it, and the invariant is now asserted.
+
+  **Four invariants are now tested** (`tests/test_voice_client.py`, under `node`): pre-roll exceeds
+  barge-in minimum; pre-roll carries ≥100ms margin beyond it; pre-roll still exceeds the ordinary
+  `speechMinMs`; and `minUtteranceMs` stays below the pre-roll. Verified by reverting the constant to
+  300 and confirming three of the four fail, then restoring — a test that has never been seen to fail is
+  not yet a test. These are plain constants, which is *precisely* why they need assertions: nothing
+  errored, nothing logged, the transcript was just quietly worse.
+
+  **Deliberately NOT fixed at the same time**, both reported alongside this one:
+  - **Trailing words occasionally lost when the speaker stops abruptly.** Frames continue to be captured
+    through the whole `silenceMs` window, so the tail should be present; no mechanism was confirmed by
+    reading the code, and inventing one would be worse than recording the symptom. Needs instrumented
+    capture, not more code reading.
+  - **Out-of-scope questions are answered from the base model's world knowledge** ("what is the most
+    interesting airport"), in the same authoritative format as grounded answers. Confirmed to be
+    modality-independent — text and voice both do it; voice merely made it more verbose. The system
+    prompt's 6,217 characters govern WHICH TOOL fits a question shape and never whether the question is
+    answerable at all; line 36 forbids recalling an *id* from memory but nothing forbids recalling
+    *facts*. This contradicts the project's headline claim that the LLM only explains numbers it never
+    computed. **Roi's call: not patched hours before the defence.** A system-prompt edit sits on every
+    question shape, and this same day a `find_items` schema reword silently flipped the model into
+    sending flattened arguments — prompt changes here have demonstrated non-local effects, and the
+    change would require re-verifying all four brief questions plus the eval suite. Recorded as the
+    honest limitation with a named fix: a refusal instruction plus an eval task asserting it. None of
+    the 26 seeded tasks probe out-of-scope input, which is why this was never caught.

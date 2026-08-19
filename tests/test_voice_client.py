@@ -57,6 +57,56 @@ def config() -> dict:
     return _run("m.VOICE_CONFIG")  # type: ignore[return-value]
 
 
+# ── VAD timing invariants ──────────────────────────────────────────────
+# These are plain constants, which is exactly why they need a test: the
+# bug below was two numbers drifting out of a relationship nothing
+# enforced, and it produced no error — just a quietly worse transcript.
+
+
+def test_preroll_covers_a_barge_in_not_just_a_normal_turn() -> None:
+    """Found live in voice conversation mode: interrupting the agent ate
+    the first word, while ordinary turns were fine.
+
+    _bargeIn() seeds the utterance from the pre-roll buffer, but barge-in
+    only fires after bargeInMinMs of sustained speech. If the buffer holds
+    less than that, the opening has already been evicted by the time it is
+    copied. At the time: preRollMs=300 < bargeInMinMs=350.
+
+    The asymmetry is the tell — a normal turn needs only speechMinMs
+    (200), which 300ms covered, so the bug hid everywhere except barge-in.
+    """
+    cfg = config()
+    assert cfg["preRollMs"] > cfg["bargeInMinMs"], (
+        f"preRollMs ({cfg['preRollMs']}) must exceed bargeInMinMs "
+        f"({cfg['bargeInMinMs']}) or a barge-in loses its opening syllables"
+    )
+
+
+def test_preroll_carries_margin_beyond_the_bare_barge_in_minimum() -> None:
+    """bargeInMinMs is a floor on SUSTAINED above-gate speech, not on
+    elapsed time. During playback the gate also demands
+    bargeInThresholdBoostDb, and a frame below it resets the counter, so
+    real elapsed time runs longer than the minimum. Equality would be
+    correct only for a speaker who starts at full volume."""
+    cfg = config()
+    assert cfg["preRollMs"] >= cfg["bargeInMinMs"] + 100
+
+
+def test_preroll_still_covers_an_ordinary_turn() -> None:
+    """The original guarantee, kept explicit so raising bargeInMinMs
+    later cannot quietly cost the normal path."""
+    cfg = config()
+    assert cfg["preRollMs"] > cfg["speechMinMs"]
+
+
+def test_a_real_utterance_is_not_discarded_as_noise() -> None:
+    """minUtteranceMs drops door-slams. It must stay below the pre-roll,
+    or a short but genuine barge-in ('wait') could be thrown away as
+    noise before it is ever transcribed."""
+    cfg = config()
+    assert cfg["minUtteranceMs"] < cfg["preRollMs"]
+
+
 # ── Chunk splitting ────────────────────────────────────────────────────
 
 

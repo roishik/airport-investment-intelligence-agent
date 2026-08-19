@@ -74,7 +74,22 @@ const VOICE_CONFIG = {
   // Audio kept from BEFORE the gate opened, prepended to every captured
   // utterance. Without it, every transcript loses its first syllable —
   // by definition the gate only opens after speech has already started.
-  preRollMs: 300,
+  //
+  // MUST EXCEED bargeInMinMs, not just speechMinMs. Found live: at 300ms
+  // this covered a normal turn (speechMinMs 200, so 100ms of headroom)
+  // but NOT a barge-in, which only fires after bargeInMinMs of sustained
+  // speech — 350ms of audio had already gone by, and only the last 300
+  // were still buffered. The opening was discarded before _bargeIn()
+  // could copy it, so interrupting the agent reliably ate the start of
+  // the sentence while ordinary turns were fine. That asymmetry is the
+  // signature of this bug.
+  //
+  // The real margin needed is larger than 350-300: during playback the
+  // gate also requires bargeInThresholdBoostDb on top, and any frame
+  // below it resets aboveGateMs to zero, so a quiet onset consonant can
+  // push actual elapsed time well past bargeInMinMs. 500ms carries that
+  // slack. Cost is ~6KB of extra 16kHz mono audio per utterance.
+  preRollMs: 500,
 
   // A hard stop, so a stuck-open gate (a fan, a television) cannot
   // upload without bound.

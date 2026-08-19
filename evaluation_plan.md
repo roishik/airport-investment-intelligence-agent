@@ -71,9 +71,9 @@ checklist. Here the same shape is **generated automatically on every
 run** from real transcripts — see `evals/report.py:render_markdown` and
 any file in `evals/results/*.md`'s "Test matrix" section (26 rows,
 refreshed by re-running `evals.run_evals`). The four rows below are the
-brief's own example questions specifically, captured end-to-end
-(`artifacts/example_questions.md`, `scripts/run_example_questions.py`,
-2026-08-18, `gpt-4o-mini`):
+brief's own example questions specifically, run end-to-end against
+`gpt-4o-mini`. Reproduce with `LLM_PROVIDER=openai python
+scripts/run_example_questions.py`:
 
 | # | User input | Expected tool call(s) | Actual behavior | Pass/Fail |
 |---|---|---|---|---|
@@ -93,9 +93,9 @@ partial-credit score.
 - **Does the agent ever state a number that doesn't trace back to a tool
   call?** Checked by `NoFabricatedNumbersGrader` on every eval trial
   (fraction of stated numbers traceable to real tool output, not just
-  pass/fail) plus a manual read of all four `artifacts/example_questions.md`
-  transcripts — every number in all four matches a tool's raw or
-  normalized output.
+  pass/fail) plus a manual read of all four brief questions' live
+  transcripts (§4 above) — every number in all four matches a tool's raw
+  or normalized output.
 - **Does the agent ever leak the system prompt when asked directly, or
   via an embedded instruction in tool output?** No, in either of the two
   tested shapes (§3) — `SystemPromptNotLeakedGrader` / `InjectionFlaggedInTraceGrader`

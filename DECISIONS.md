@@ -1,5 +1,11 @@
 # Decision log
 
+> **Short on time? Read [`docs/DECISIONS_SUMMARY.md`](docs/DECISIONS_SUMMARY.md) instead** —
+> the same decisions organized by subject (scoring, data, agent loop, guardrails, evals,
+> voice, UI, testing), a few sentences each. This file is the full build-order log behind
+> it — every rejected alternative, every number, in the order it happened. Come back here
+> only for the detail on a specific decision.
+
 One line per non-obvious choice, in build order, with why — written
 **as** the choice was made, not reconstructed afterwards. Anyone reading
 this should be able to reconstruct the reasoning without asking me.

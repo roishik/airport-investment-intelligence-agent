@@ -133,7 +133,7 @@ isn't installed — `pytest` stays zero-setup either way).
 
 | File | Job |
 |---|---|
-| `run_example_questions.py` | Runs the brief's four example questions end-to-end and writes `artifacts/example_questions.{json,md}`. |
+| `run_example_questions.py` | Runs the brief's four example questions end-to-end and prints the full transcript — the fastest way to see the agent work without opening the UI. |
 | `smoke_test.py` | Manual end-to-end check against a real provider — not part of `pytest`. |
 | `calibrate_resolver.py` | Picked `entity_resolution.py`'s relevance threshold from labeled data, not from feel. |
 

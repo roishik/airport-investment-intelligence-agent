@@ -9,6 +9,9 @@ _working/
 # Local editor/tooling scratch
 .claude/
 
+# Ad-hoc local output — regenerate with scripts/run_example_questions.py
+artifacts/
+
 # Python
 .venv/
 __pycache__/

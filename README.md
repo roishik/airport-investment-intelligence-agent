@@ -55,7 +55,6 @@ evals/      runnable eval harness — 26 seeded failure-mode tasks
 tests/      pytest suite (296 tests)
 static/     the web UI — chat, live tool-call log, voice controls
 scripts/    one-off utilities (example-question runner, smoke test, calibration)
-artifacts/  saved output of scripts/run_example_questions.py
 ```
 
 **File-by-file map, what each one does, and how a request flows through

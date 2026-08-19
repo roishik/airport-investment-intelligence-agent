@@ -40,34 +40,19 @@ gets you the real tool-calling agent, not just the mock stand-in — see
 ## Layout
 
 ```
-app/
-  scoring.py            pure deterministic ranking — zero I/O, zero LLM
-  analytics.py          pure filter / aggregate / derived-metric contracts
-  entity_resolution.py  pure fuzzy name -> id matching with a confidence bar
-  runway_geometry.py    parallel-runway separation + arrival-capacity model
-  dataset.py            loads data/ into the in-memory tables every tool reads
-  tools.py              the tool surface: fetches data, calls the pure
-                          modules, returns per-component breakdowns
-  guardrails.py         untrusted-data wrapping + injection pre-filter
-  system_prompt.py      the "never compute a number yourself" contract
-  agent_loop.py         the hand-rolled loop (~70 lines, no framework)
-  config.py             env loading + provider selection
-  conversation.py       the in-memory history, shared by text and voice
-  providers/llm/        swappable backends: mock | openai | anthropic | groq
-  providers/stt/        speech-to-text: openai
-  providers/tts/        text-to-speech: openai | google
-  main.py               FastAPI web chat (one page, one endpoint)
-  voice_api.py          optional voice routes (transcribe / speak / interrupt)
-  cli.py                terminal chat
-static/index.html       the web UI: chat + live tool-call log + voice controls
-static/markdown.js      renders the agent's markdown replies (escape-first)
-static/voice.js         mic capture, endpointing, playback, barge-in
-data/                    the committed dataset app/dataset.py reads — refresh with refresh_data.py
-scripts/                 smoke_test.py, run_example_questions.py, calibrate_resolver.py
-artifacts/               saved output of scripts/run_example_questions.py
-evals/                  runnable eval harness — 26 seeded failure-mode tasks
-tests/                  pytest suite
+app/        the agent: loop, tools, scoring, entity resolution, web + voice routes
+data/       committed dataset app/dataset.py reads — refresh with refresh_data.py
+evals/      runnable eval harness — 26 seeded failure-mode tasks
+tests/      pytest suite (296 tests)
+static/     the web UI — chat, live tool-call log, voice controls
+scripts/    one-off utilities (example-question runner, smoke test, calibration)
+artifacts/  saved output of scripts/run_example_questions.py
 ```
+
+**File-by-file map, what each one does, and how a request flows through
+them: see [`ARCHITECTURE.md`](ARCHITECTURE.md). Why things were built
+this way: [`DECISIONS_SUMMARY.md`](DECISIONS_SUMMARY.md) (by subject) or
+[`DECISIONS.md`](DECISIONS.md) (the full build-order log).**
 
 ## The four question shapes
 

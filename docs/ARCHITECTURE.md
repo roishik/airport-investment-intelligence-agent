@@ -80,6 +80,11 @@ and keyless.
 `processed_data/` is everything `refresh_data.py` builds or derives from
 it — `app/dataset.py` only ever reads from `processed_data/`.
 
+> **This branch (`deploy`) omits `data/raw_data/`.** It's never read at
+> runtime — only `refresh_data.py` reads it, to rebuild `processed_data/`.
+> Trimmed here to shrink the deploy image; `raw_data/` is present on `main`
+> and is re-fetched fresh by `refresh_data.py` regardless.
+
 | File | Contents |
 |---|---|
 | `raw_data/airports.csv`, `raw_data/runways.csv` | OurAirports bulk export — identity, geo, runway geometry |

@@ -23,7 +23,7 @@ single build's sanity pass, not a production evaluation program — see §7.
 
 ## 2. Deterministic scoring correctness (cheapest, do this first)
 
-Covered by `tests/test_scoring.py` (51 tests) and the domain-specific
+Covered by `tests/test_scoring.py` (54 tests) and the domain-specific
 `tests/test_tools_domain.py` (46 tests, incl. the SFO runway-geometry and
 unmet-demand model). Run with:
 
@@ -85,7 +85,7 @@ scripts/run_example_questions.py`:
 For the broader 26-task automated matrix (ambiguous-query handling, tool
 selection under off-topic questions, missing-data/unknown-id handling,
 self-computation refusal, explanation quality, max-turns robustness),
-see `evals/results/openai_20260819T055640Z.md` — 24/26 pass, 0.96 avg
+see `evals/results/openai_20260819T092220Z.md` — 24/26 pass, 0.97 avg
 partial-credit score.
 
 ## 5. Safety / governance stress tests

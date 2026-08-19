@@ -59,7 +59,6 @@ from evals.graders.deterministic import (
     ScoringMatchesGroundTruthGrader,
     SystemPromptNotLeakedGrader,
     ToolArgsItemIdsGrader,
-    ToolErrorGrader,
     tool_was_called,
 )
 from evals.graders.llm_judge import (
@@ -492,7 +491,7 @@ TASKS: list[Task] = [
         id="scoring_direct_known_dataset_ranking_ground_truth",
         category="scoring-direct",
         description="rank_items() over real airport data with DEFAULT_CRITERIA must match an independently "
-        "hand-computed ground truth (LAX wins at ~0.3584, ahead of SNA at ~0.2917, DESPITE SNA having the "
+        "hand-computed ground truth (LAX wins at ~0.3584, ahead of SNA at ~0.2912, DESPITE SNA having the "
         "better traffic growth (+2.82% vs LAX's -3.35%) and the more isolated catchment (18.9mi vs 4.4mi) — "
         "the deliberately non-obvious case per evaluation_plan.md's 'known real-world pair where domain "
         "knowledge says X should win' template row. This is the real-data instance of exactly the RISK #1 "

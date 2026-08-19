@@ -56,10 +56,12 @@ from app.scoring import (
 #
 # So the two genuinely forward-looking signals carry 50% between them,
 # and the two size-flavoured ones 30%, with absolute_scale alone held to
-# 15%. Sanity check that this works: LAX ranks 69th of 144, not 1st.
+# 15%. Sanity check that this works: LAX ranks 67th of 144, not 1st.
 #
 # Bounds are the 5th/95th percentile of the ELIGIBLE set, measured
-# 2026-08-18 and frozen as constants rather than recomputed per query —
+# 2026-08-18 (capacity_pressure's floor recomputed 2026-08-19 — it had
+# drifted; see DECISIONS.md's final-review entry) and frozen as constants
+# rather than recomputed per query —
 # a ranking has to be reproducible, and bounds that shift with whatever
 # subset was passed in would make two runs silently incomparable.
 # Criterion.normalize clamps anything outside them, so an out-of-range
@@ -81,7 +83,7 @@ DEFAULT_CRITERIA: list[Criterion] = [
     # absolute_scale — kept because it is the only congestion proxy
     # available and the LA/Santa-Ana comparison needs one, but held to
     # 15% and disclosed rather than hidden. See DECISIONS.md [18:20].
-    Criterion(name="capacity_pressure", weight=15, lower_bound=201438.53, upper_bound=7823094.2),
+    Criterion(name="capacity_pressure", weight=15, lower_bound=287264.425, upper_bound=7823094.2),
     # Size of the prize. Deliberately the joint-smallest weight.
     Criterion(name="absolute_scale", weight=15, lower_bound=564368.0, upper_bound=26519646.05),
 ]
@@ -498,8 +500,8 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
 
 # Two scores this close are the same score. Chosen from the real data
 # rather than picked round: at the final weights the top two airports
-# (Nashville 0.6343, Denver 0.6317) differ by 0.0026, and the winner
-# flips on a 10% change to a single weight — so anything inside this band
+# (Nashville 0.6333, Denver 0.6314) differ by 0.0019, and the winner
+# flips on a 5% change to a single weight — so anything inside this band
 # is a tie the tool has no business breaking silently.
 #
 # Same shape as entity_resolution's `decisive` flag, deliberately: a

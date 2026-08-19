@@ -99,7 +99,7 @@ alternatives.
   `absolute_scale`. Forward-looking signals carry 50%, size-flavored
   ones 30% — the brief asks where investment is most profitable based
   on *increased* capacity, a headroom question, not a size question.
-  Sanity check: LAX ranks 69th of 144, not 1st.
+  Sanity check: LAX ranks 67th of 144, not 1st.
   → `DECISIONS.md` "P2 — criteria and weights"
 - **`capacity_pressure` kept despite r=0.89 correlation with
   `absolute_scale`, disclosed rather than hidden.** It's the most direct
@@ -109,11 +109,11 @@ alternatives.
   stated in `DESIGN_DOC.md`.
   → `DECISIONS.md` "P2 — criteria and weights"
 - **The #1 slot is not decisive, and the ranking says so.** Nashville and
-  Denver are 0.41% apart at the top, and the winner flips at a 10%
+  Denver are 0.30% apart at the top, and the winner flips at a 5%
   weight change on `traffic_growth` — for opposite reasons (Nashville
   wins on growth, Denver on scale). `weight_robustness_report` and
   `analyze_weight_sensitivity` surface this explicitly rather than
-  implying a decisive winner. Kendall tau stays 0.76–0.91 across halving
+  implying a decisive winner. Kendall tau stays 0.76–0.92 across halving
   or doubling any single criterion — the ordering as a whole is far more
   stable than the top slot.
   → `DECISIONS.md` "P2 — criteria and weights"

@@ -627,5 +627,5 @@ def test_real_dataset_scores_are_pinned_to_known_values():
     items = {i: fetch_item_metrics(i) for i in ("LAX", "SNA")}
     ranked = {r.item_id: r for r in rank_items(items, DEFAULT_CRITERIA).ranked}
     assert round(ranked["LAX"].total_score, 4) == 0.3584
-    assert round(ranked["SNA"].total_score, 4) == 0.2917
+    assert round(ranked["SNA"].total_score, 4) == 0.2912
     assert len(dataset.ELIGIBLE_IDS) == 144

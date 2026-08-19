@@ -41,7 +41,8 @@ Five criteria, weights 25/25/20/15/15, applied to a default ranking
 scoped to FAA hub class L/M/S (144 of 515 airports — see §4's "what was
 deliberately not built" for why the other 371 are excluded from ranking,
 not from the dataset). Bounds are the 5th/95th percentile of the eligible
-set, measured 2026-08-18 and frozen as constants in `app/tools.py` rather
+set, measured 2026-08-18 (`capacity_pressure`'s floor recomputed
+2026-08-19) and frozen as constants in `app/tools.py` rather
 than recomputed per query, so a ranking is reproducible across runs.
 
 ### The framing problem this had to solve
@@ -58,17 +59,23 @@ for that reason.
 
 | Criterion | Weight | Bounds | Direction | Source | Defence |
 |---|---|---|---|---|---|
-| `traffic_growth` | 25 | −0.079 → 0.138 | higher better | FAA CY2024→CY2025 % change | Is pressure already rising? The cleanest headroom signal — r≈−0.02 with raw enplanements, i.e. genuinely independent of size. |
-| `regional_demand_growth` | 25 | −0.0025 → 0.0241 | higher better | Census county population CAGR, 2022→2025 | Is the region itself growing? The only demand-side signal in the set; r≈0.10–0.18 with size — the fix for the "ranks by current size" failure the brief's framing punishes. |
-| `catchment_monopoly` | 20 | 10.7 → 100.6 mi | higher better | Nearest scheduled-service competitor distance (haversine, computed against the full 515) | Can demand escape to another airport? r≈−0.06 with size — independent. |
-| `capacity_pressure` | 15 | 201,439 → 7,823,094 | higher better | Enplanements ÷ air-carrier runway count | The only available congestion proxy, and what Q2 (LAX vs. SNA) reads from — but it correlates **r=0.89** with `absolute_scale`, so it is deliberately held to the lowest tier of weight and disclosed here rather than presented as independent. |
+| `traffic_growth` | 25 | −0.079 → 0.138 | higher better | FAA CY2024→CY2025 % change | Is pressure already rising? The cleanest headroom signal — r=−0.02 with raw enplanements across all 515, −0.29 across the ranked 144 — independent of size on either population. |
+| `regional_demand_growth` | 25 | −0.0025 → 0.0241 | higher better | Census county population CAGR, 2022→2025 | Is the region itself growing? The only demand-side signal in the set; r=+0.18 with size across all 515, +0.02 across the ranked 144 — the fix for the "ranks by current size" failure the brief's framing punishes. |
+| `catchment_monopoly` | 20 | 10.7 → 100.6 mi | higher better | Nearest scheduled-service competitor distance (haversine, computed against the full 515) | Can demand escape to another airport? r=−0.05 with size across all 515, −0.29 across the ranked 144 — independent on either. |
+| `capacity_pressure` | 15 | 287,264 → 7,823,094 | higher better | Enplanements ÷ air-carrier runway count | The only available congestion proxy, and what Q2 (LAX vs. SNA) reads from — but it correlates **r=0.89** with `absolute_scale` across all 515 (0.85 across the ranked 144), so it is deliberately held to the lowest tier of weight and disclosed here rather than presented as independent. |
 | `absolute_scale` | 15 | 564,368 → 26,519,646 | higher better | FAA CY2025 preliminary enplanements | "Size of the prize" — kept, but capped well under the ≤25% ceiling this design set for itself, so it cannot dominate. |
+
+All r-values above are Pearson against `absolute_scale`, quoted on both
+populations because they differ: correlations measured across the full
+515-airport set are not the same as those across the 144 actually
+ranked, and the ranked set is the one that matters for the ranking. Both
+are given so the claim can be checked either way.
 
 Net effect: the two genuinely decorrelated, forward-looking criteria
 (`traffic_growth` + `regional_demand_growth`) carry **50%** of the
 weight; the two size-flavoured ones (`capacity_pressure` +
 `absolute_scale`, themselves correlated with each other) carry **30%**.
-Sanity check that this works as intended: **LAX ranks 69th of 144**, not
+Sanity check that this works as intended: **LAX ranks 67th of 144**, not
 1st — a pure size-ranking would put it first every time.
 
 ### Normalization and missing data
@@ -93,21 +100,21 @@ Real output of `weight_robustness_report(ELIGIBLE_IDS)` against the live
 144-airport set, 2026-08-18:
 
 ```
-baseline_top: BNA (Nashville, 0.6343)  — runner-up: DEN (Denver, 0.6317)
-most_sensitive_criterion: catchment_monopoly (flips winner at 0.95x)
+baseline_top: BNA (Nashville, 0.6333)  — runner-up: DEN (Denver, 0.6314)
+most_sensitive_criterion: traffic_growth (flips winner at 0.95x)
 
 criterion                current_weight  flip_factor
-traffic_growth           25              0.90
-regional_demand_growth   25              0.90
+traffic_growth           25              0.95
+regional_demand_growth   25              0.95
 catchment_monopoly       20              0.95
 capacity_pressure        15              1.05
 absolute_scale           15              1.05
 ```
 
 **The headline finding is not a defect to explain away: the #1 slot is
-not decisive.** BNA and DEN are 0.41% apart, and every one of the five
-weights flips the winner at a 5–10% change — there is no weight in this
-configuration that could move by 10% without changing which airport
+not decisive.** BNA and DEN are 0.30% apart, and every one of the five
+weights flips the winner at a 5% change — there is no weight in this
+configuration that could move by 5% without changing which airport
 leads. That is the honest answer to "why these weights": the *ranking's
 overall shape* is what the weights are defending, not a specific #1.
 
@@ -116,11 +123,13 @@ overall shape* is what the weights are defending, not a specific #1.
 
 | Criterion | ×0.5 τ | ×0.5 top changed? | ×2.0 τ | ×2.0 top changed? |
 |---|---|---|---|---|
-| `traffic_growth` | 0.839 | BNA→DEN | 0.765 | BNA→PVU |
-| `catchment_monopoly` | 0.836 | BNA→DEN | 0.770 | no |
-| `absolute_scale` | 0.915 | no | 0.874 | BNA→DEN |
+| `traffic_growth` | 0.841 | BNA→DEN | 0.764 | BNA→PVU |
+| `regional_demand_growth` | 0.858 | BNA→DEN | 0.837 | BNA→XNA |
+| `catchment_monopoly` | 0.837 | BNA→DEN | 0.769 | no |
+| `capacity_pressure` | 0.907 | no | 0.851 | BNA→DEN |
+| `absolute_scale` | 0.915 | no | 0.875 | BNA→DEN |
 
-Kendall tau stays **0.77–0.91** even when a single criterion's weight is
+Kendall tau stays **0.76–0.92** even when a single criterion's weight is
 halved or doubled — the overall ordering is far more stable than the top
 slot, which is the real defence: the weighting judgement is load-bearing
 but not fragile. **Consequence for the product, not just the writeup:**
@@ -136,7 +145,7 @@ built in. `sensitivity_analysis()` re-runs the ranking under scaled
 weights and reports per-airport rank and score deltas plus Kendall tau
 against the baseline; `find_weight_flip_point()` returns the smallest
 multiplier on a given criterion that changes the winner. If the winner
-flips at 0.9×, the honest presentation is "these two are tied", and the
+flips at 0.95×, the honest presentation is "these two are tied", and the
 tool says so instead of leaving it to intuition.
 
 ---
@@ -178,7 +187,7 @@ Default: **OpenAI `gpt-4o-mini`** (`LLM_PROVIDER=openai`) — small,
 cheap, fast, and it's a genuine tool-calling model, which is the one
 capability this whole design leans on; the task never needs the model's
 own reasoning to be deep, only its tool selection and language to be
-reliable. Real cost from the P4 eval run: 26 tasks, **$0.028 for the
+reliable. Real cost from the latest eval run: 26 tasks, **$0.026 for the
 agent's own tool-calling turns** (see `evals/results/`). That figure is
 agent-only — the LLM-judge grading pass calls a separate provider
 instance (`evals/graders/llm_judge.py`) whose token usage this harness
@@ -405,12 +414,12 @@ deterministic graders plus an LLM judge validated against hand labels.
 an opinion. See `evaluation_plan.md`.
 
 **Real numbers, 2026-08-19, against the real 515-airport dataset**
-(`evals/results/openai_20260819T055640Z.md`,
-`evals/results/mock_20260819T055255Z.md`):
+(`evals/results/openai_20260819T092220Z.md`,
+`evals/results/mock_20260819T092240Z.md`):
 
 | Provider | Pass rate | Avg partial-credit score |
 |---|---|---|
-| `openai` (gpt-4o-mini) | **24/26 = 92%** | 0.96 |
+| `openai` (gpt-4o-mini) | **24/26 = 92%** | 0.97 |
 | `mock` (scripted stand-in, not real reasoning) | 16/26 = 62% | 0.83 |
 
 The two `openai` failures are genuine, not harness noise, and are left failing on purpose rather than

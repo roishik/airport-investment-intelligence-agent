@@ -195,7 +195,7 @@ actually need, and where each comes from:
   unrelated GA airstrip sharing the same 3-letter code in OurAirports;
   tie-broken by airport type (large > medium > small) since a code with
   real FAA enplanements data is never the GA strip. Verified all three
-  (AFE, AWI, ORS) resolve to the airport that actually has enplenements,
+  (AFE, AWI, ORS) resolve to the airport that actually has enplanements,
   not the strip. `nearest_competitor` is now a real geographic claim for
   every airport in the set, not an artifact of a curated 27 — see
   `candidates.json`'s `_meta.nearest_competitor_note`.
@@ -1165,8 +1165,8 @@ actually need, and where each comes from:
   exactly the qualifier the fix's own comment said mattered most. Widened to also keep attribute-only
   elements; re-verified against the real live feed afterward.
 - **Regenerated the committed eval results from scratch** rather than leaving the pre-fix numbers in
-  place: `evals/results/openai_20260819T055640Z.md` (92%, matching the previously-documented rate, with
-  the two genuine failures above) and `mock_20260819T055255Z.md` (62% — moved from 35% purely from the
+  place: `evals/results/openai_20260819T092220Z.md` (92%, matching the previously-documented rate, with
+  the two genuine failures above) and `mock_20260819T092240Z.md` (62% — moved from 35% purely from the
   eligibility-gate and `expected_tool` fixes above, not a regression; the mock provider's exact rate has
   never been the signal). Superseded result files from earlier in the build were deleted rather than left
   to accumulate — nothing in the repo points at them anymore.
@@ -1261,3 +1261,36 @@ actually need, and where each comes from:
   swapping a new monthly-ZIP data source into scoring this close to submission was assessed as not worth
   the risk. Recorded here, per Roi's call, purely so the defense answer is "found and tested, chose not
   to integrate, here's why" rather than "didn't know it existed."
+
+## Final review pass: a stale normalization bound, found and corrected
+
+- **[2026-08-19 ~12:10 IDT] `capacity_pressure`'s lower bound was frozen at 201,438.53 but the eligible
+  set's actual 5th percentile is 287,264.425 — the one criterion of five whose constant had drifted out
+  of sync with the data it was supposed to describe.** Found by recomputing all ten bounds against the
+  shipped dataset rather than trusting them: the other four criteria matched their stated 5th/95th
+  percentiles to the digit, and `capacity_pressure`'s *upper* bound (7,823,094.2) matched exactly too —
+  only its floor was stale, left over from before a change to the eligible set or to
+  `air_carrier_runway_count`. `DESIGN_DOC.md` and this file both claim "bounds are the 5th/95th
+  percentile of the eligible 144", so the claim was simply false for one of five.
+  **Roi's call: fix the constant rather than disclose the drift.** The alternative considered and
+  rejected was leaving it frozen and documenting it in `ASSUMPTIONS.md` — cheaper, and defensible on
+  reproducibility grounds, but it leaves a document making a checkable claim that does not check out.
+  Impact was measured before deciding, not after: the top three are unchanged (BNA, DEN, XNA), no airport
+  moves more than 2 rank places, and 29 of 144 move at all. What did change, and is now corrected
+  everywhere it appears:
+  - LAX 69th → **67th** of 144 (README, `DESIGN_DOC.md` §2, `docs/DECISIONS_SUMMARY.md`, `app/tools.py`'s
+    header comment).
+  - BNA 0.6343 → **0.6333**, DEN 0.6317 → **0.6314**; the top-two gap 0.41% → **0.30%**.
+  - `most_sensitive_criterion` catchment_monopoly → **traffic_growth**, and the flip factors for
+    `traffic_growth`/`regional_demand_growth` tighten from 0.90 to **0.95** — so *all five* weights now
+    flip the winner at a 5% change, where the doc previously said 5–10%. The headline finding gets
+    slightly stronger, not weaker: the #1 slot is even less decisive than stated.
+  - SNA 0.2917 → **0.2912** (LAX's 0.3584 is unchanged — its `capacity_pressure` sits above the 95th
+    percentile and clamps to 1.0 either way).
+  - `tests/test_scoring.py::test_real_dataset_scores_are_pinned_to_known_values` caught the SNA change on
+    the first run, which is exactly the job that pin was added to do at [1096].
+  **Deliberately NOT changed: `evals/judge_calibration_data.py` and the dated files in `evals/results/`.**
+  The calibration fixtures are self-contained — each one carries its own tool-context block, and the
+  judge grades the answer against *that* context, not against live data — so editing them would
+  invalidate a validated 90%-agreement measurement to fix a cosmetic 0.0005. The result files are
+  timestamped records of runs that really happened; rewriting them would make them fiction.

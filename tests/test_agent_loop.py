@@ -90,8 +90,6 @@ def test_run_agent_wraps_tool_result_as_untrusted_data():
 
 
 def test_unknown_tool_reported_as_error_not_a_crash():
-    provider = MockLLMProvider()
-
     class OneShotBadToolProvider:
         name = "bad-tool-test"
         model = "n/a"

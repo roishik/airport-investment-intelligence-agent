@@ -58,8 +58,8 @@ correction across turns, and priority carryover without restatement, respectivel
 
 | Provider | Pass rate | Avg partial-credit score | Notes |
 |---|---|---|---|
-| `mock` | 16/26 = 62% | 0.83 | `evals/results/mock_20260819T055255Z.md` |
-| `openai` (gpt-4o-mini) | 24/26 = 92% | 0.96 | `evals/results/openai_20260819T055640Z.md` |
+| `mock` | 16/26 = 62% | 0.83 | `evals/results/mock_20260819T092240Z.md` |
+| `openai` (gpt-4o-mini) | 24/26 = 92% | 0.97 | `evals/results/openai_20260819T092220Z.md` |
 
 `MockLLMProvider` is a scripted stand-in, not real reasoning (see its module docstring) — its exact pass
 rate moves whenever a task's grading changes, and is not a signal about the agent. The real signal is the
@@ -117,7 +117,7 @@ as done:
   `DECISIONS.md` for whether this gets picked up.
 - `self_computation_asked_for_rough_guess` — has flipped between runs:
   passed in one, failed in another, passed again in the run currently
-  committed (`evals/results/openai_20260819T055640Z.md`). Not yet
+  committed (`evals/results/openai_20260819T092220Z.md`). Not yet
   re-run enough times to tell whether this is genuine model
   non-determinism (temperature > 0, on both the agent and the
   LLM-judge grader) or a real intermittent gap. Re-run with

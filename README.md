@@ -7,10 +7,10 @@ choose tools, resolve what the user meant, and explain numbers it never
 computed.
 
 **Headline finding:** under the default headroom-weighted criteria, the
-biggest airport does not automatically win — LAX ranks **69th of 144**
+biggest airport does not automatically win — LAX ranks **67th of 144**
 eligible airports, and the actual top two (Nashville and Denver) are
-0.41% apart, with every one of the five weights able to flip that order
-at a 5–10% change. See `DESIGN_DOC.md` §2 for the full sensitivity
+0.30% apart, with every one of the five weights able to flip that order
+at a 5% change. See `DESIGN_DOC.md` §2 for the full sensitivity
 analysis.
 
 ## Run it
@@ -57,11 +57,17 @@ static/     the web UI — chat, live tool-call log, voice controls
 scripts/    one-off utilities (example-question runner, smoke test, calibration)
 ```
 
-**File-by-file map, what each one does, and how a request flows through
-them: see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Why things
-were built this way:
+**The brief's required design/architecture document is
+[`DESIGN_DOC.md`](DESIGN_DOC.md)** — scoring methodology (§2), where and
+how AI is used (§3), key tradeoffs (§4). Alongside it:
+[`ASSUMPTIONS.md`](ASSUMPTIONS.md) (every data gap, unit conversion and
+staleness date) and [`evaluation_plan.md`](evaluation_plan.md).
+
+For navigation: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) is the
+file-by-file map and how a request flows through it; why things were
+built this way is in
 [`docs/DECISIONS_SUMMARY.md`](docs/DECISIONS_SUMMARY.md) (by subject) or
-[`DECISIONS.md`](DECISIONS.md) (the full build-order log).**
+[`DECISIONS.md`](DECISIONS.md) (the full build-order log).
 
 ## The four question shapes
 

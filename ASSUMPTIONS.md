@@ -24,7 +24,7 @@ is rewarded, not penalized — expect to be pushed on it directly.
   not the full ~2,500-airport OurAirports universe of GA/private fields.
   A real geographic claim for the vast majority of airports (any nearer
   *scheduled-service* competitor is in this set by construction — FAA's
-  own enplenements list is exactly "which airports have scheduled
+  own enplanements list is exactly "which airports have scheduled
   commercial service"); it would only understate a catchment-monopoly
   signal in the rare case where the true nearest facility is a
   private/GA field, which isn't a competitor for commercial passengers
@@ -121,7 +121,7 @@ is rewarded, not penalized — expect to be pushed on it directly.
   `DECISIONS.md` [14:53]) — the questions are illustrative, not the
   full intended scope of what the agent should answer. This does *not*
   include the ~2,500-airport OurAirports universe of GA/private fields
-  with no scheduled service — only airports with real FAA enplenements
+  with no scheduled service — only airports with real FAA enplanements
   data, which is itself already FAA's definition of "commercial
   service."
 - **The default *ranking* is scoped to FAA hub class L/M/S (144 of the

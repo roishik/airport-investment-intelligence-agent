@@ -497,8 +497,6 @@ def test_focus_reports_an_unknown_criterion_instead_of_ignoring_it():
 def test_focus_separates_no_data_from_a_low_value():
     """'No data' and 'the smallest number' are different answers to
     'which is more congested', and collapsing them would invent a fact."""
-    from app.tools import compare_items
-
     ranking = [
         {
             "item_id": "AAA",

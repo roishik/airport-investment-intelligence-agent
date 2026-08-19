@@ -287,7 +287,7 @@ alternatives.
   bugs you already know the shape of; running catches the ones you
   don't.
   → `DECISIONS.md` "P3", "Two bugs found using the shipped agent"
-- **296 tests, cold-clone verified with zero keys.** A genuine second
+- **305 tests, cold-clone verified with zero keys.** A genuine second
   `git clone` into a scratch directory, fresh venv: `pytest` green, the
   mock CLI runs, the server boots, then all four brief questions
   answered end-to-end against real `gpt-4o-mini` from that same clone.

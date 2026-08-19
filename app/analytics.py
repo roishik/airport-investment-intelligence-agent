@@ -93,6 +93,56 @@ def known_attribute_keys(attributes: Mapping[str, Mapping[str, str]]) -> tuple[s
     return tuple(sorted(keys))
 
 
+def known_attribute_values(
+    attributes: Mapping[str, Mapping[str, str]],
+    keys: Sequence[str],
+    *,
+    max_listed: int = 12,
+) -> dict[str, dict[str, Any]]:
+    """For each requested key, the values that actually OCCUR in the data.
+
+    known_attribute_keys() answers "is there such a field?". This answers
+    the next question down: "that field exists -- but does anything in it
+    ever equal what I asked for?" Those are different failures and only
+    the first one was reported, so the second produced a confident
+    falsehood: `region` holds Census REGIONS (Northeast/Midwest/South/
+    West), so filtering region="New England" -- a Census DIVISION -- is a
+    real key with a value the data never uses. It matched nothing, and
+    "nothing matched" was reported to the user as "there are no New
+    England airports", which is false; there are 23, reachable via
+    {'new_england': 'yes'}.
+
+    This is the same guard aggregate_records already applies to an
+    unknown category VALUE, applied here to a filter value. See that
+    function's comment for the original instance of the bug.
+
+    High-cardinality keys are summarized rather than listed -- municipality
+    has ~490 values, and the point is to show the caller the SHAPE of the
+    value space so it can spot its own mistake, not to paste the dataset
+    into a tool result. The shape is uniform whether truncated or not, so
+    a reader never has to branch on which form it got.
+    """
+    out: dict[str, dict[str, Any]] = {}
+    for key in keys:
+        folded = key.casefold()
+        values = sorted(
+            {
+                str(attrs[k])
+                for attrs in attributes.values()
+                for k in attrs
+                if k.casefold() == folded
+            }
+        )
+        if not values:
+            continue
+        out[folded] = {
+            "distinct_count": len(values),
+            "values": values[:max_listed],
+            "truncated": len(values) > max_listed,
+        }
+    return out
+
+
 # ─────────────────────────────────────────────────────────────────────────
 # A4 — aggregate over one entity's records
 # ─────────────────────────────────────────────────────────────────────────

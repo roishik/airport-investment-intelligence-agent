@@ -29,6 +29,7 @@ from app.tools import (
     PRACTICAL_CAPACITY_PER_ARRIVAL_STREAM,
     compare_items,
     estimate_unmet_demand,
+    find_items,
     list_criteria,
 )
 
@@ -417,6 +418,87 @@ def test_find_items_via_registry_with_no_arguments_does_not_crash():
 
     result = TOOL_REGISTRY["find_items"]({})
     assert result["match_count"] == len(dataset.AIRPORTS)
+
+
+def test_find_items_reports_the_real_values_when_a_known_key_matches_nothing():
+    """The brief's OWN first question, failing live against gpt-4o-mini:
+    "Which airports in New England are strong candidates for terminal
+    expansion?" -> find_items({'region': 'New England'}) -> 0 rows ->
+    "there are no airports in New England that match."
+
+    `region` is a real key, so unknown_filter_keys was empty and the model
+    had no way to tell "you invented a value" from "none exist". It holds
+    Census REGIONS; New England is a Census DIVISION. There are 23 such
+    airports under {'new_england': 'yes'}.
+
+    Pins that the empty result now carries the real value space, so the
+    model can correct itself rather than assert a false absence."""
+    result = find_items({"region": "New England"})
+
+    assert result["match_count"] == 0
+    # The key IS known — which is precisely why the old signal was silent.
+    assert result["unknown_filter_keys"] == []
+    assert result["known_values_for_filtered_keys"]["region"]["values"] == [
+        "Midwest",
+        "Northeast",
+        "Other",
+        "South",
+        "West",
+    ]
+    assert "New England" in result["guidance"]
+    # The route to the right answer must be discoverable from the result.
+    assert "new_england" in result["known_attribute_keys"]
+
+
+def test_find_items_new_england_key_returns_the_airports_that_do_exist():
+    """The other half: the correct call must actually work, or the
+    guidance above sends the model somewhere equally empty."""
+    result = find_items({"new_england": "yes"})
+    assert result["match_count"] == 23
+    assert "guidance" not in result
+
+
+def test_find_items_accepts_a_flattened_call_instead_of_matching_everything():
+    """Found live on the brief's first question. The model called
+    find_items({'new_england': 'yes'}) — filter keys at the top level,
+    no 'filters' wrapper. args.get('filters') was None, "no filters"
+    means "match everything", so a request for a 23-row SUBSET returned
+    all 515 rows and reported success. The model then named New England
+    airports from memory, which is the hallucination this tool exists to
+    prevent.
+
+    Both shapes must mean the same thing."""
+    from app.tools import TOOL_REGISTRY
+
+    flattened = TOOL_REGISTRY["find_items"]({"new_england": "yes"})
+    nested = TOOL_REGISTRY["find_items"]({"filters": {"new_england": "yes"}})
+
+    assert flattened["match_count"] == 23
+    assert flattened["item_ids"] == nested["item_ids"]
+    # The echoed filters are the audit trail: the log shows what was applied.
+    assert flattened["filters"] == {"new_england": "yes"}
+
+
+def test_find_items_no_arguments_still_means_match_everything():
+    """The flattening fix must not break the legitimate empty call — that
+    behaviour was itself a P4 eval finding and is documented in the
+    tool's own docstring."""
+    from app.tools import TOOL_REGISTRY
+
+    assert TOOL_REGISTRY["find_items"]({})["match_count"] == len(dataset.AIRPORTS)
+    assert TOOL_REGISTRY["find_items"]({"filters": None})["match_count"] == len(
+        dataset.AIRPORTS
+    )
+
+
+def test_find_items_success_path_carries_no_diagnostics():
+    """The diagnostic fires only when it's needed. A successful filter
+    must not pay for it — every extra key here is context the model reads
+    on every single call."""
+    result = find_items({"hub_class": "L"})
+    assert result["match_count"] > 0
+    assert "guidance" not in result
+    assert "known_values_for_filtered_keys" not in result
 
 
 # ── focus_criterion: answering a single-dimension question ─────────────

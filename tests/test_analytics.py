@@ -13,6 +13,7 @@ from app.analytics import (
     build_derived_metric,
     filter_items,
     known_attribute_keys,
+    known_attribute_values,
 )
 
 ATTRS = {
@@ -66,6 +67,42 @@ def test_filter_result_is_sorted_deterministically():
 
 def test_known_attribute_keys_lists_every_field():
     assert known_attribute_keys(ATTRS) == ("region", "status", "tier")
+
+
+def test_known_attribute_values_lists_the_values_a_key_actually_takes():
+    """The distinction known_attribute_keys can't draw: `region` exists,
+    but it never equals 'atlantis'. Without this a caller cannot tell
+    "no such field" from "real field, value you invented"."""
+    result = known_attribute_values(ATTRS, ["region"])
+    assert result["region"]["values"] == ["north", "south"]
+    assert result["region"]["distinct_count"] == 2
+    assert result["region"]["truncated"] is False
+
+
+def test_known_attribute_values_skips_keys_that_do_not_exist():
+    """An unknown key is already reported via unknown_filter_keys; echoing
+    it here with an empty value list would imply the field exists."""
+    assert known_attribute_values(ATTRS, ["colour"]) == {}
+
+
+def test_known_attribute_values_truncates_high_cardinality_keys():
+    """municipality has ~490 values in the real dataset. The result is a
+    hint to the model, not a dump of the dataset — but the SHAPE stays
+    uniform so a reader never branches on which form it got."""
+    wide = {f"i{n}": {"city": f"city_{n:03d}"} for n in range(50)}
+    result = known_attribute_values(wide, ["city"], max_listed=5)
+    assert result["city"]["distinct_count"] == 50
+    assert len(result["city"]["values"]) == 5
+    assert result["city"]["truncated"] is True
+
+
+def test_known_attribute_values_matches_keys_case_insensitively():
+    """filter_items folds case on keys, so this must agree with it or a
+    caller passing 'Region' gets an empty diagnostic on a real field."""
+    assert known_attribute_values(ATTRS, ["REGION"])["region"]["values"] == [
+        "north",
+        "south",
+    ]
 
 
 # ── A4: aggregate ───────────────────────────────────────────────────────

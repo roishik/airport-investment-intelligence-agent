@@ -35,6 +35,7 @@ from app.analytics import (
     build_derived_metric,
     filter_items,
     known_attribute_keys,
+    known_attribute_values,
 )
 from app import dataset
 from app.entity_resolution import resolve
@@ -304,7 +305,11 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
                             "Attribute name -> required value, e.g. "
                             "{'new_england': 'yes'} or {'region': 'West', "
                             "'hub_class': 'L'}. Available keys include: state "
-                            "(2-letter), region (Census region), new_england "
+                            "(2-letter), region (Census region — the ONLY "
+                            "values are Northeast/Midwest/South/West/Other; "
+                            "New England is a Census DIVISION, not a region, "
+                            "so match it with the new_england key below, "
+                            "never with region), new_england "
                             "(yes/no), hub_class (L/M/S/N/None), municipality, "
                             "weather_constrained (yes/no/unknown -- 'unknown' means the "
                             "runway geometry could not be measured, NOT that the "
@@ -867,11 +872,16 @@ def find_items(filters: dict[str, str]) -> dict[str, Any]:
     """Attribute filter -> matching ids. Also returns the attribute keys
     that actually exist, so an unknown field reads as "there is no such
     field" rather than as "nothing matched" — those are different
-    answers and conflating them misleads the user."""
+    answers and conflating them misleads the user.
+
+    On an empty result it additionally returns the values each filtered
+    key actually takes, because a known key with an unknown VALUE is a
+    third distinct answer that used to be indistinguishable from the
+    second. See the comment on the empty-result branch below."""
     matched = filter_items(dataset.ATTRIBUTES, filters)
     known_keys = known_attribute_keys(dataset.ATTRIBUTES)
     unknown_keys = [k for k in filters if k.casefold() not in known_keys]
-    return {
+    result = {
         "filters": dict(filters),
         "item_ids": list(matched),
         "match_count": len(matched),
@@ -881,6 +891,41 @@ def find_items(filters: dict[str, str]) -> dict[str, Any]:
         # in the dataset qualifies.
         "unknown_filter_keys": unknown_keys,
     }
+
+    # A known KEY carrying a value the dataset never uses matched nothing,
+    # and "nothing matched" reads as "none exist". Found live on the
+    # brief's own first question: the model called
+    # {'region': 'New England'} — `region` is a real key, but it holds
+    # Census REGIONS (Northeast/Midwest/South/West) and New England is a
+    # Census DIVISION — got zero rows, and answered "there are no airports
+    # in New England that match." There are 23, under {'new_england':
+    # 'yes'}. Every number in that reply was correct and the reply was
+    # false.
+    #
+    # Exactly the failure aggregate_records already guards for an unknown
+    # category VALUE; this is that guard applied to a filter value. The
+    # cure is the same: hand back the real value space and forbid the
+    # confident negative, so the model can correct itself in one more turn
+    # instead of confidently reporting an absence.
+    if filters and not matched:
+        result["known_values_for_filtered_keys"] = known_attribute_values(
+            dataset.ATTRIBUTES,
+            [k for k in filters if k.casefold() in known_keys],
+        )
+        result["guidance"] = (
+            "Nothing matched every filter. This is NOT evidence that no such item "
+            "exists — check your VALUES before answering. "
+            "'known_values_for_filtered_keys' lists the values each key you "
+            "filtered on actually takes. If a value you passed is not in that "
+            "list, you filtered on something this dataset never stores (a common "
+            "case: a place name that is a Census DIVISION, like 'New England', "
+            "passed as 'region', which only holds Northeast/Midwest/South/West) — "
+            "call this tool again with a real value, or with the key that does "
+            "express what was asked; 'known_attribute_keys' has the full list. "
+            "Only report that nothing exists after every value you used appears "
+            "in the lists above."
+        )
+    return result
 
 
 def aggregate_records(item_id: str, operation: str, category: str | None = None) -> dict[str, Any]:
@@ -1647,6 +1692,37 @@ def get_live_airport_status(item_id: str) -> dict[str, Any]:
 # Dispatch table used by agent_loop.py: tool name -> callable(args_dict).
 # Kept as a plain dict, not a decorator/registry framework — this is the
 # entire "tool registry" a hand-rolled loop needs.
+def _find_items_filters(args: dict[str, Any]) -> dict[str, str]:
+    """Normalize find_items' arguments. Three shapes arrive in practice and
+    they do NOT mean the same thing:
+
+        {}                       -> match everything. Legitimate and
+                                    documented; a model asking for the whole
+                                    dataset. args.get (not args[...]) because
+                                    a raw KeyError('filters') here was logged
+                                    as a tool error in P4 evals instead of the
+                                    empty-filter result clearly intended.
+        {"filters": {...}}       -> the schema's shape.
+        {"new_england": "yes"}   -> the model dropped the wrapper.
+
+    The third used to collapse into the first: args.get("filters") returned
+    None, "no filters" means "match everything", and a request for a SUBSET
+    silently returned all 515 rows. The model then listed New England
+    airports from its own memory — the exact hallucination find_items exists
+    to prevent — wearing a successful tool call as cover. Found live on the
+    brief's own first question.
+
+    So a flattened call is read as filters rather than as "no filters".
+    Nothing is guessed: an unrecognized key still lands in
+    `unknown_filter_keys` downstream, which already tells the model it
+    filtered on a field that does not exist. Only scalars are taken; a
+    stray list or object is another tool's argument, not a filter value.
+    """
+    if "filters" in args:
+        return args.get("filters") or {}
+    return {k: v for k, v in args.items() if isinstance(v, (str, int, float, bool))}
+
+
 TOOL_REGISTRY: dict[str, Callable[[dict[str, Any]], Any]] = {
     "get_live_airport_status": lambda args: get_live_airport_status(item_id=args["item_id"]),
     "compare_items": lambda args: compare_items(
@@ -1655,12 +1731,7 @@ TOOL_REGISTRY: dict[str, Callable[[dict[str, Any]], Any]] = {
     "get_item_metrics": lambda args: get_item_metrics(item_id=args["item_id"]),
     "list_criteria": lambda _: list_criteria(),
     "resolve_entity": lambda args: resolve_entity(query=args["query"]),
-    # args.get, not args[...]: filters={} is a MEANINGFUL call ("match
-    # everything", see find_items' own docstring), not malformed input —
-    # found live in P4 evals when gpt-4o-mini called find_items with no
-    # arguments and got a raw KeyError('filters') logged as a tool error
-    # instead of the empty-filter result it clearly intended.
-    "find_items": lambda args: find_items(filters=args.get("filters") or {}),
+    "find_items": lambda args: find_items(filters=_find_items_filters(args)),
     "aggregate_records": lambda args: aggregate_records(
         item_id=args["item_id"], operation=args["operation"], category=args.get("category")
     ),

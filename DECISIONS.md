@@ -1294,3 +1294,57 @@ actually need, and where each comes from:
   judge grades the answer against *that* context, not against live data — so editing them would
   invalidate a validated 90%-agreement measurement to fix a cosmetic 0.0005. The result files are
   timestamped records of runs that really happened; rewriting them would make them fiction.
+
+## Post-submission: two silent-falsehood bugs on the brief's own first question
+
+Found while deploying (2026-08-19, after submission), by running the four brief questions against the
+hosted instance. Both reproduce identically on the submitted `main` at `46ea3bb`, so neither was
+introduced by deployment — the deploy just ran the questions one more time, which is how they surfaced.
+Fixed on `main` first, then merged to `deploy`.
+
+- **[2026-08-19 ~14:40 IDT] Q1 — "Which airports in New England are strong candidates for terminal
+  expansion?" — answered "there are no airports in New England that match." There are 23.**
+  Two independent defects stacked, and each alone was enough to produce a confident falsehood.
+
+  **Defect A — a known filter KEY carrying a value the dataset never uses.** The model called
+  `find_items({'region': 'New England'})`. `region` is a real attribute, so `unknown_filter_keys` came
+  back empty; but `region` holds Census *regions* (Northeast/Midwest/South/West/Other) and New England is
+  a Census **division**. Zero rows, no signal, and "nothing matched" was reported to the user as "none
+  exist." This is *exactly* the failure `aggregate_records` was already hardened against at [P3] — the
+  "0% of flights out of Anchorage are long haul" bug, where "no such category" and "a real category with
+  zero rows" were conflated. That fix's own comment says it is "the same guard `find_items` already had
+  via `unknown_filter_keys`, applied to a category VALUE rather than a filter KEY". The symmetric case —
+  a filter *value* — was never closed. Now it is: `analytics.known_attribute_values()` (pure, no I/O,
+  same contract as its sibling `known_attribute_keys`) returns the values each filtered key actually
+  takes, and `find_items` attaches them plus directive `guidance` **only on an empty result**, so the
+  success path pays no context cost. High-cardinality keys (`municipality` has 490 values) are truncated
+  to 12 with `distinct_count`/`truncated` so the shape stays uniform and the result never becomes a dump
+  of the dataset. The tool schema was also made precise — it now names the only five `region` values and
+  says New England is a division — so the wrong call is *prevented*, not merely recovered from.
+
+  **Defect B — a flattened tool call silently matched everything.** With the schema fixed, the model
+  began calling `find_items({'new_england': 'yes'})` — correct key, but with the `filters` wrapper
+  dropped. The registry did `args.get("filters") or {}`, so a missing wrapper read as *no filters*, which
+  is a documented, legitimate call meaning "match everything." A request for a 23-row subset returned all
+  **515** rows, reported success, and the model then listed New England airports **from its own memory** —
+  precisely the hallucination path `find_items` exists to close, wearing a successful tool call as cover.
+  Worse than Defect A, because the answer *looked* right: BOS, BDL, PWM really are New England airports.
+  The `or {}` was itself a P4 eval fix (a raw `KeyError('filters')` on a genuinely empty call); this is a
+  case of one silent-failure fix opening another. Replaced with a named, documented, tested adapter
+  `_find_items_filters()` that distinguishes all three shapes: `{}` still means everything, `{"filters":
+  {...}}` is the schema shape, and top-level scalars are read as flattened filters. Nothing is guessed —
+  an unrecognized key still lands in `unknown_filter_keys` downstream. Only scalars are taken, so another
+  tool's stray list argument can't be mistaken for a filter.
+
+  **Verification.** Both fixes were checked against the real `gpt-4o-mini`, five runs each, before and
+  after. Before: 5/5 answered "none exist" (and, mid-fix, 5/5 silently used all 515). After: 5/5 return
+  `match_count=23` and rank the real New England airports. Notably the model emits **both** call shapes
+  across those runs — nested in 3, flattened in 2 — so the adapter is load-bearing, not defensive
+  padding. The other three brief questions were re-run and are unchanged, zero tool errors. Suite went
+  296 → 305 green; the new tests pin the exact live failures, including that the legitimate empty call
+  still means "match everything" so the P4 fix cannot be lost.
+
+  **Known gap, stated rather than papered over: no eval task covers Q1's shape.** The seeded suite has 26
+  tasks and none exercises a group-filter question, which is why this survived to submission — the eval
+  harness graded what it had, and this was outside it. Adding a task now would be writing the test after
+  seeing the answer; it is recorded here as the honest next item instead.

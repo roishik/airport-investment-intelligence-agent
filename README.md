@@ -37,7 +37,7 @@ barge-in), which reuses the same `OPENAI_API_KEY` rather than needing a
 second credential.
 
 > **No key on hand, or want to see it run first?** `LLM_PROVIDER`
-> defaults to `mock`, so `.venv/bin/pytest -q` (296 tests) and
+> defaults to `mock`, so `.venv/bin/pytest -q` (305 tests) and
 > `.venv/bin/python -m app.cli` both work with zero setup, no network,
 > no key. `LLM_PROVIDER=anthropic`, or `=groq` (a free key, no credit
 > card, from [console.groq.com/keys](https://console.groq.com/keys)),
@@ -52,7 +52,7 @@ second credential.
 app/        the agent: loop, tools, scoring, entity resolution, web + voice routes
 data/       committed dataset app/dataset.py reads — refresh with refresh_data.py
 evals/      runnable eval harness — 26 seeded failure-mode tasks
-tests/      pytest suite (296 tests)
+tests/      pytest suite (305 tests)
 static/     the web UI — chat, live tool-call log, voice controls
 scripts/    one-off utilities (example-question runner, smoke test, calibration)
 ```
@@ -220,7 +220,7 @@ conversion, and staleness date is there. Highlights:
 ## Tests
 
 ```bash
-.venv/bin/pytest -q     # 296 passing
+.venv/bin/pytest -q     # 305 passing
 ```
 
 No network, no API key, no mocking of the pure modules — `scoring.py`,

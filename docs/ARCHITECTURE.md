@@ -110,7 +110,7 @@ numbers; this is the file map.
 | `judge_calibration_data.py`, `judge_validation.py` | The hand-labeled set the judge is checked against, and the agreement script (90% agreement, see `evals/README.md`). |
 | `results/` | Committed real runs: one mock, one `openai`, one judge-validation report. Cited by exact filename from `DESIGN_DOC.md` and `evaluation_plan.md` — regenerate, don't rename. |
 
-## `tests/` — pytest suite (296 tests)
+## `tests/` — pytest suite (305 tests)
 
 Mirrors `app/` roughly one-to-one (`test_scoring.py`, `test_analytics.py`,
 `test_entity_resolution.py`, `test_agent_loop.py`, `test_guardrails.py`,

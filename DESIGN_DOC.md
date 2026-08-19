@@ -111,6 +111,18 @@ capacity_pressure        15              1.05
 absolute_scale           15              1.05
 ```
 
+**All five criteria are tied, not just the one named.** Every flip
+factor is exactly 5% away from 1.0 — three shrink BNA's winning
+criteria to 0.95×, two grow DEN's winning criteria to 1.05× — and both
+directions represent the same size of nudge. `most_sensitive_criterion`
+picks one label out of that five-way tie (`min()` over `|factor - 1.0|`,
+first match wins on ties), so which name appears there is an artifact
+of criterion ordering, not a real distinction — it has already changed
+once (`catchment_monopoly` → `traffic_growth`) across a data fix that
+didn't touch either criterion's weight. Read the field as "a
+representative of the tied set," not "the one criterion that matters
+most."
+
 **The headline finding is not a defect to explain away: the #1 slot is
 not decisive.** BNA and DEN are 0.30% apart, and every one of the five
 weights flips the winner at a 5% change — there is no weight in this

@@ -8,18 +8,17 @@ model, and key lookup differ. If Groq's API ever diverges from OpenAI's
 shape, override chat() here rather than letting the subclass silently
 drift out of sync with its parent.
 
-WHY THIS EXISTS: D6 in PLAN.md. The brief explicitly names free-tier
-providers as acceptable, and without one, a reviewer with no paid OpenAI/
-Anthropic key cannot see the real tool-calling agent run at all — only
+WHY THIS EXISTS: the brief explicitly names free-tier providers as
+acceptable, and without one, a reviewer with no paid OpenAI/Anthropic key
+cannot see the real tool-calling agent run at all — only
 LLM_PROVIDER=mock's scripted stand-in. Groq's free tier needs no credit
 card, has generous rate limits for a quick evaluation session, and
 serves several open-weight models (Llama 3.3, GPT-OSS) that support
 native tool calling, which this app depends on.
 
 NOTE: verified in this build only via the OpenAI provider; this file has
-not been exercised against a live Groq key (creating one is a
-reviewer/Roi action, not something this session did — see DECISIONS.md's
-"account creation is off-limits" precedent). Same caveat as
+not been exercised against a live Groq key (creating an account is not
+something automated here — see DECISIONS.md). Same caveat as
 anthropic_llm.py: if swapping LLM_PROVIDER=groq requires touching
 agent_loop.py, app/main.py, or app/cli.py, the abstraction has a leak."""
 from __future__ import annotations

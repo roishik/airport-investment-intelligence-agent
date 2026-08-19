@@ -90,15 +90,23 @@ is rewarded, not penalized — expect to be pushed on it directly.
 
 ## Explicit scope cuts
 
-- **Voice is browser-native, not a real cascaded pipeline.** The brief
-  calls it a bonus; `static/index.html` uses the Web Speech API
-  (`SpeechRecognition` for mic input, `speechSynthesis` for spoken
-  replies) directly against the existing SSE chat endpoint — no server
-  change, no new dependency. Chrome/Edge/Safari support it; Firefox does
-  not, and the controls disable themselves with an explanatory title
-  rather than failing silently on an unsupported browser.
+- **Voice has two paths, and only the newer one is a real pipeline.**
+  The brief calls voice a bonus. A browser-native path needs no
+  credentials at all (`SpeechRecognition` for mic input, `speechSynthesis`
+  for spoken replies, directly against the existing SSE chat endpoint —
+  no server change); Chrome/Edge/Safari support it, Firefox does not, and
+  the controls disable themselves with an explanatory title rather than
+  failing silently. With `OPENAI_API_KEY` set, a second "conversation
+  mode" is also available: `app/voice_api.py`, `app/providers/stt/`,
+  `app/providers/tts/`, and `static/voice.js` — real server-side speech
+  models, an open microphone with local endpointing, and barge-in. See
+  `DESIGN_DOC.md` §3a and `README.md` "Voice" for the full design and the
+  named limitations (energy VAD cannot distinguish an interruption from a
+  backchannel; transcription and synthesis are per-utterance, not
+  streaming per token).
 - **No persistent multi-user history or auth.** In-memory single-session
-  history only (`app/main.py`) — fine for a live demo, not production.
+  history only (`app/conversation.py`, shared by the text and voice
+  endpoints) — fine for a live demo, not production.
 - **14 of 515 airports have no population data**, and this is handled by
   design rather than by dropping them. Puerto Rico (7) is published
   separately with no municipio totals file in the Vintage 2025 tree; the

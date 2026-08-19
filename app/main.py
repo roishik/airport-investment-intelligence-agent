@@ -1,4 +1,4 @@
-"""Minimal FastAPI chat UI shell — reusable across every rep.
+"""Minimal FastAPI chat UI shell.
 
 Deliberately small: one page (static/index.html), a POST /chat/stream
 endpoint (SSE), a non-streaming POST /chat kept for any caller that wants

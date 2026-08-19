@@ -50,7 +50,7 @@ from typing import Mapping, Sequence
 # should-match and should-not-match pairs. Re-derive it with
 # `PYTHONPATH=. python scripts/calibrate_resolver.py` after touching any
 # weight or metric here, and re-derive it again against REAL names once a
-# rep swaps in a real dataset — a threshold calibrated on placeholder
+# this is pointed at a different real dataset — a threshold calibrated on placeholder
 # data is only as good as that data.
 MIN_RELEVANCE = 0.63
 

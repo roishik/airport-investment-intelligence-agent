@@ -4,7 +4,7 @@ This is what makes the whole app runnable end-to-end with zero
 setup: `LLM_PROVIDER=mock` (the default — see app/config.py) exercises
 the real agent loop, the real tool-calling protocol, the real guardrail
 wrapping, and the real chat UI, without ever touching the network. Swap
-to LLM_PROVIDER=openai or =anthropic once a rep has a live key; nothing
+to LLM_PROVIDER=openai or =anthropic once you have a live key; nothing
 else changes. See README "Running without an API key".
 
 Scripted, two-phase behavior:

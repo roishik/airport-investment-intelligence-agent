@@ -33,7 +33,16 @@ from evals.types import GradeResult, Grader, Outcome, Task
 #      number 100x too large.
 # _extract_stated_numbers() below normalizes both away; the comma groups
 # are optional so plain decimals like "0.3584" still match unchanged.
-_DECIMAL_RE = re.compile(r"-?\d{1,3}(?:,\d{3})*\.\d+(%)?")
+#
+# Two more found by mutation testing, after the above:
+#   3. the comma-group form REQUIRED groups of exactly three digits, so an
+#      un-comma'd large number ("36497303.0") still truncated to its last
+#      three digits before the dot — the comma fix only fixed the comma
+#      case. `\d+` before the optional comma groups covers both.
+#   4. no left boundary -> would also match the tail of a larger integer
+#      run if this were ever used to scan mid-word; anchored with a
+#      negative lookbehind so it cannot start mid-digit-run.
+_DECIMAL_RE = re.compile(r"(?<![\d.,])-?\d+(?:,\d{3})*\.\d+(%)?")
 
 
 def _extract_stated_numbers(text: str) -> list[float]:
@@ -181,18 +190,34 @@ class ToolArgsItemIdsGrader(Grader):
 # Outcome checks against the deterministic scoring core
 # ─────────────────────────────────────────────────────────────────────────
 class ScoringMatchesGroundTruthGrader(Grader):
-    """Independently recomputes rank_items() from app.scoring (the same
-    pure function the tool itself calls) for whichever item ids the
-    agent actually asked compare_items to rank, and checks the tool's
-    returned total_score for each item is within `tolerance` of that
-    ground truth. This is the "checking scoring.py output matches
-    expected within tolerance" deterministic grader named in the brief —
-    it does NOT re-derive from the LLM's prose, only from the tool's own
-    structured result, so it's immune to phrasing changes.
+    """Recomputes rank_items() from app.scoring — the same pure function
+    the tool itself calls, with the same DEFAULT_CRITERIA and the same
+    fetch_item_metrics — for whichever item ids the agent actually asked
+    compare_items to rank, and checks the tool's returned total_score for
+    each item is within `tolerance` of that recomputation.
+
+    NOT an independent ground truth, despite an earlier version of this
+    docstring claiming otherwise, and worth being precise about the
+    difference: it can catch a PLUMBING bug in compare_items (wrong
+    criteria list passed through, a rounding slip, a dropped row) but it
+    cannot catch a bug in the scoring FORMULA itself, because it calls
+    that exact formula to produce its own expected value. Confirmed by
+    mutation — squaring scoring.py's contribution term moves LAX's real
+    score from 0.3584 to 0.3111, and this grader still reports pass=True,
+    score=1.0, because both sides of its comparison moved together.
+    The genuinely independent check is `run_direct` in
+    scoring_direct_known_dataset_ranking_ground_truth (a hardcoded
+    expected number, and now also tests/test_scoring.py's
+    test_real_dataset_scores_are_pinned_to_known_values, offline and
+    free) — that is the "checking scoring.py output matches expected
+    within tolerance" grader the brief actually asks for. This one is a
+    tool-integration check with the same name pattern, not a
+    replacement for it.
 
     Deliberately decoupled from "were the right items chosen" (that's
     ToolArgsItemIdsGrader) — this grader only asks "given whatever items
-    WERE compared, are the numbers right."
+    WERE compared, do the returned numbers match what rank_items()
+    computes for them right now."
     """
 
     name = "scoring_matches_ground_truth"
@@ -281,17 +306,33 @@ class NoFabricatedNumbersGrader(Grader):
     exactly the "model tries to compute a number itself" failure mode
     NEVER_COMPUTE_RULE (app/system_prompt.py) forbids — scored 0.
 
-    Heuristic, stated plainly: only DECIMAL numbers are checked (a
-    trailing '.' + digits), because this agent's fabrication risk is
-    specifically the 0..1 normalized/total scores, which are always
-    printed with a decimal point; small integers in prose (e.g. "3
-    options", "the 2nd item") are not the kind of number this rule is
-    about and would be false positives if included."""
+    Heuristic, stated plainly, with a real gap named rather than hidden:
+    only DECIMAL numbers are checked (a trailing '.' + digits). That
+    covers this agent's main fabrication risk — the 0..1 normalized/total
+    scores, always printed with a decimal point — while not flagging
+    small integers in prose ("3 options", "the 2nd item") as false
+    positives. It does NOT cover an integer enplanement figure stated
+    without a decimal ("36,497,303 passengers"), which is a real way a
+    model could fabricate a number and have it pass unchecked. Left as a
+    named limitation rather than widened to bare integers, because "the
+    3rd airport" and "36497303" are indistinguishable by shape alone
+    without also parsing which noun phrase the number is attached to."""
 
     name = "no_fabricated_numbers"
 
-    def __init__(self, tolerance: float = 1e-2):
+    # A fixed absolute tolerance of 1e-2 is generous for a small ranking
+    # and nearly meaningless for a large enplanements figure: on a
+    # 40-airport comparison, ~91% of [0, 1] falls within 1e-2 of SOME
+    # number already in the pool, so a fabricated 0..1 score has roughly
+    # a 9-in-10 chance of being called "traceable" purely by density.
+    # Relative tolerance does not have that failure mode — a number that
+    # is off by 1% of ITS OWN size stays flagged regardless of how many
+    # other numbers happen to be nearby.
+    def __init__(self, tolerance: float = 1e-4):
         self.tolerance = tolerance
+
+    def _is_traceable(self, n: float, pool: list[float]) -> bool:
+        return any(abs(n - p) <= max(self.tolerance, abs(p) * self.tolerance) for p in pool)
 
     def grade(self, task: Task, outcome: Outcome) -> GradeResult:
         text_numbers = _extract_stated_numbers(outcome.trace.final_text)
@@ -306,7 +347,7 @@ class NoFabricatedNumbersGrader(Grader):
                 f"final answer states {text_numbers} but no tool was ever called successfully — "
                 "every one of those numbers was self-computed, which the system prompt forbids.",
             )
-        traceable = [n for n in text_numbers if any(abs(n - p) <= self.tolerance for p in pool)]
+        traceable = [n for n in text_numbers if self._is_traceable(n, pool)]
         score = len(traceable) / len(text_numbers)
         return GradeResult(
             self.name,

@@ -192,12 +192,25 @@ def test_resolve_reports_which_alias_matched():
 def test_resolve_one_weak_lone_candidate_is_not_decisive():
     """The floor half of the bar, isolated: a single candidate with no
     competition still isn't decisive if it's a poor match. Gap alone
-    would wrongly call this decisive (nothing to compare against)."""
-    catalog = {"option_a": ["Alpha"]}
-    result = resolve("Alphx zzz", catalog)
-    if result.candidates:
-        assert result.candidates[0].confidence < DECISIVE_MIN_CONFIDENCE
-        assert result.decisive is False
+    would wrongly call this decisive — there is nothing to compare it
+    against, so the gap is unbounded and only the confidence floor can
+    refuse.
+
+    The query matters. An earlier version of this test used a query that
+    matched NOTHING, so `candidates` was empty, and the assertions sat
+    behind `if result.candidates:` and never ran — a test that could not
+    fail, guarding the constant it claimed to guard. Confirmed by
+    mutation: dropping DECISIVE_MIN_CONFIDENCE from 0.75 to 0.64 left the
+    whole suite green. "Alph" is chosen because it surfaces at 0.74,
+    just under the bar, so the test fails the moment the bar moves.
+    """
+    result = resolve("Alph", {"option_a": ["Alpha Option"]})
+    assert len(result.candidates) == 1, "fixture must surface exactly one weak candidate"
+    confidence = result.candidates[0].confidence
+    assert MIN_RELEVANCE <= confidence < DECISIVE_MIN_CONFIDENCE, (
+        f"fixture no longer sits between the surfacing and acting bars (got {confidence})"
+    )
+    assert result.decisive is False
 
 
 def test_stopword_query_does_not_outrank_a_genuine_match():

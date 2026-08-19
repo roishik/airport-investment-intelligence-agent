@@ -1,17 +1,18 @@
 """System prompt fragment(s) for the agent.
 
 Kept as plain string constants (not a templating system) on purpose — a
-24-hour rep does not need a prompt-templating library, and having the
+24-hour build does not need a prompt-templating library, and having the
 exact text as a Python constant makes it trivial to unit-test that the
 "never compute a number yourself" rule is actually present (see
 tests/test_agent_loop.py -> test_system_prompt_forbids_llm_math), and to
 quote verbatim in DESIGN_DOC.md's "Where AI is used vs deterministic
 code" section.
 
-Rules 1, 3 and 5 are domain-independent and identical to what the
-skeleton shipped with. Rules 2/4a and the opening paragraph carry this
-assignment's specifics, and rule 6 exists only because this domain has a
-live feed that must stay out of the scored path.
+Rules 1, 3 and 5 are domain-independent and generic to any
+tool-calling agent built on this pattern. Rules 2/4a/4b and the opening
+paragraph carry this assignment's specifics; rule 7 exists only because
+this domain has a live feed that must stay out of the scored path; rule
+8 exists because a metro name ("LA") is not an airport.
 """
 from __future__ import annotations
 

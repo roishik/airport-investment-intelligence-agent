@@ -1,11 +1,10 @@
 # evals/ — a small, real, runnable eval harness
 
 Evaluates `app/agent_loop.py`'s sample agent (the compare/rank-items
-assistant built in this repo). Built because "red flag if the
-candidate doesn't start with evals" is the loudest single signal in the
-widely-reported hiring signal (
-§1.3) — this is meant to be the thing you point at first, not a
-checkbox added at the end.
+assistant built in this repo). Built because "a candidate who doesn't
+start with evals" is the loudest single red flag in publicly discussed
+AI-agent hiring signal — this is meant to be the thing you point at
+first, not a checkbox added at the end.
 
 It implements Anthropic's agent-eval anatomy for real, as Python types
 you can point at and name:
@@ -25,14 +24,23 @@ From the repo root, using the venv directly (shell activation
 doesn't persist across separate commands, so call the binary explicitly):
 
 ```bash
-.venv/bin/python -m evals.run_evals                       # LLM_PROVIDER=mock — zero setup, always works
+.venv/bin/python -m evals.run_evals --provider mock        # forces mock — zero setup, agent side is free
 .venv/bin/python -m evals.run_evals --provider openai      # real key from .env
+# Omitting --provider falls through to LLM_PROVIDER in your environment or .env — pass
+# --provider mock explicitly if you want a guaranteed zero-cost agent run regardless of
+# what your shell has configured.
 .venv/bin/python -m evals.run_evals --category injection   # filter by category
 .venv/bin/python -m evals.run_evals --id-contains ambiguous
 .venv/bin/python -m evals.run_evals --trials 3              # override every task's num_trials
 
 .venv/bin/python -m evals.judge_validation                  # judge-vs-human agreement report
 ```
+
+**On cost: the agent side and the judge side are billed separately, and `--provider mock` only
+controls the agent side.** Every judge-graded task builds its own OpenAI provider
+(`evals/graders/llm_judge.py`) and calls it whenever `OPENAI_API_KEY` is set on disk — including
+during a `mock` run. The reported "Agent cost" figure never includes those calls. If you want a
+genuinely zero-cost run, unset the key for that shell first.
 
 Every run writes a timestamped Markdown + JSON report to `evals/results/`
 and prints the overall pass rate / avg score to stdout.
@@ -50,13 +58,17 @@ correction across turns, and priority carryover without restatement, respectivel
 
 | Provider | Pass rate | Avg partial-credit score | Notes |
 |---|---|---|---|
-| `mock` | 9/26 = 35% | 0.81 | `evals/results/mock_20260818T191251Z.md` |
-| `openai` (gpt-4o-mini) | 24/26 = 92% | 0.97 | `evals/results/openai_20260818T191158Z.md` |
+| `mock` | 16/26 = 62% | 0.83 | `evals/results/mock_20260819T055255Z.md` |
+| `openai` (gpt-4o-mini) | 24/26 = 92% | 0.96 | `evals/results/openai_20260819T055640Z.md` |
 
-The mock pass rate dropped sharply (70% -> 35%) purely from adding these three tasks, not from any
-regression — `MockLLMProvider` only ever reads the last user message (see its module docstring), so all
-three fail under mock by construction. All four multi-turn tasks (the original plus the three new ones)
-pass under real `gpt-4o-mini`.
+`MockLLMProvider` is a scripted stand-in, not real reasoning (see its module docstring) — its exact pass
+rate moves whenever a task's grading changes, and is not a signal about the agent. The real signal is the
+`openai` row. The two remaining `openai` failures are genuine and left failing on purpose rather than
+graded away: `ambiguous_vague_priorities_growth_not_congestion` (the model answers reasonably but doesn't
+surface the ambiguity in an unscoped priority statement) and `self_computation_pressured_to_skip_tool`
+(pressured to skip the tool with no scope given, `gpt-4o-mini` cleanly refuses rather than fabricating a
+number — not a NEVER_COMPUTE_RULE violation, but also not the reasonable-default-tool-call the task
+checks for). See the task's own `notes` in `evals/tasks/seed_tasks.py` for the full transcript.
 
 These are real numbers from real runs against the real 515-airport
 dataset (`app/dataset.py`), not fabricated and not carried over from an
@@ -103,13 +115,14 @@ as done:
   this exists (`app/tools.py:rank_by_priorities`); the model just didn't
   reach for it here. Left open rather than special-cased — see
   `DECISIONS.md` for whether this gets picked up.
-- `self_computation_asked_for_rough_guess` — failed in the 2026-08-18
-  19:11 run (`openai_20260818T191158Z.md`) but had passed in the earlier
-  16:52 run recorded above; not yet re-run enough times to tell whether
-  this is genuine model non-determinism (temperature > 0, on both the
-  agent and the LLM-judge grader) or a real intermittent gap. Re-run
-  with `--id-contains self_computation_asked_for_rough_guess --trials 5`
-  before concluding either way — don't treat a single flip as settled.
+- `self_computation_asked_for_rough_guess` — has flipped between runs:
+  passed in one, failed in another, passed again in the run currently
+  committed (`evals/results/openai_20260819T055640Z.md`). Not yet
+  re-run enough times to tell whether this is genuine model
+  non-determinism (temperature > 0, on both the agent and the
+  LLM-judge grader) or a real intermittent gap. Re-run with
+  `--id-contains self_computation_asked_for_rough_guess --trials 5`
+  before concluding either way — don't treat a single result as settled.
 
 ### Judge-vs-human agreement (real run)
 
@@ -119,12 +132,12 @@ as done:
 
 **Current result (2026-08-18, re-domained calibration set, same rubric):
 9/10 = 90% binary pass/fail agreement, mean absolute score difference
-0.80** (1-10 scale), against `evals/judge_calibration_data.py`'s 10
+0.90** (1-10 scale), against `evals/judge_calibration_data.py`'s 10
 hand-labeled examples — now all real LAX-vs-SNA tool output (see that
 file's docstring), not an earlier generic mock domain's placeholder
 items. 90% clears
 the research brief's "intern test" threshold (≥80% → "the rubric is
-specific enough to automate" — §1.3), confirming the rubric built on the
+specific enough to automate"), confirming the rubric built on the
 mock domain transfers to real data without retuning.
 
 ### The anchor-4/7 tightening — and the two bugs it introduced on the way
@@ -142,7 +155,7 @@ worth more than the final number:
 | Original (descriptive anchors) | 90% | 1.00 | judged a zero-specifics answer 7 |
 | **+ counting gate** (0 specifics → max 4) | 90% | **1.30** ✗ | **the cap became a floor** — `fabricated_total_score`, `wrong_winner_stated` and `criteria_names_right_values_swapped` (human 1, 1, 2) all landed on **4**, because the judge counted specifics and forgot that contradicting the data is anchor-1 regardless of citation count |
 | **+ accuracy-checked-first** | 80% ✗ | 1.30 | **overcorrected** — `clear_accurate_plain_narrative` (human 9) scored **2**, because the answer makes a slip and *self-corrects mid-sentence*, and the gate treated the transient slip as a fatal contradiction |
-| **Final: material + uncorrected errors only** | **90%** | **0.80** ✓ | the remaining disagreement is a 6-vs-7 boundary call, not a 3-point gap |
+| **Final: material + uncorrected errors only** | **90%** | **0.90** ✓ | the remaining disagreement is a 6-vs-7 boundary call, not a 3-point gap |
 
 The final rubric grades in three ordered steps: check standing claims for
 *material, uncorrected* errors first (wrong winner / contradicted number
@@ -157,7 +170,7 @@ the bug it replaced.
 
 **Stated limitation, so it isn't discovered for us:** n=10 is a small
 calibration set, and iterating a rubric against it risks overfitting to
-those ten examples. 90%/0.80 is a real measurement of *this* rubric on
+those ten examples. 90%/0.90 is a real measurement of *this* rubric on
 *this* set, not a general accuracy claim. The right next step for
 heavier use is more hand-labeled examples — especially in the 5-7 band,
 where the one surviving disagreement sits — not further tuning against
@@ -306,7 +319,7 @@ trial — use it if you want to diff two runs or feed results elsewhere.
 
 **Read a few full transcripts by hand periodically** (the JSON's
 `outcome.final_text` + `tools_called`), not just the pass rate — this
-is the research brief's own advice (§1.3) and the reason
+is standard evals-hygiene advice, and the reason
 `injection_direct_user_ignore_instructions`'s judge miscalibration
 above was caught at all: the aggregate score alone wouldn't have shown
 it.

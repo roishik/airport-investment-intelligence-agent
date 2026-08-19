@@ -31,7 +31,7 @@ from dataclasses import dataclass
 UNTRUSTED_CLOSE = "</untrusted_data>"
 
 # Deliberately simple regexes with an obvious name, so this list is easy to
-# read and easy to extend in a real rep. Not exhaustive — see README for
+# read and easy to extend. Not exhaustive — see README for
 # what a production version would add (semantic classifier, allow-listed
 # tool schemas, output scanning for exfiltrated secrets, etc).
 _INJECTION_PATTERNS: list[re.Pattern[str]] = [

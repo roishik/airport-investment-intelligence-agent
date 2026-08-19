@@ -15,7 +15,7 @@ at weight 0.6 scored 'the weather in paris' ~ 'the alpha option' at
 0.5420, above the genuine match 'alpha' ~ 'the alpha option' at 0.4825 —
 negative separation, no workable threshold. The fix was a new signal
 (length-weighted token containment), not a tuned constant. Keep this
-script honest: when a real rep swaps in real names, replace these pairs
+script honest: when this is pointed at a real dataset, replace these pairs
 with real ones from that dataset before trusting the number.
 """
 from __future__ import annotations

@@ -89,7 +89,7 @@ DEFAULT_CRITERIA: list[Criterion] = [
 # Plain-language gloss for each criterion, condensed from the comments
 # above. Kept as a separate dict rather than a field on Criterion because
 # scoring.py's docstring requires that dataclass shape to stay identical
-# across reps — this is domain text, not scoring logic.
+# stable — this is domain text, not scoring logic.
 CRITERION_DESCRIPTIONS: dict[str, str] = {
     "traffic_growth": "Year-over-year passenger traffic growth (FAA CY2024->CY2025 change).",
     "regional_demand_growth": (
@@ -1596,15 +1596,24 @@ def get_live_airport_status(item_id: str) -> dict[str, Any]:
         # magnitudes were lost the first time.
         detail: dict[str, Any] = {}
         for child in node.iter():
-            if child is node or not (child.text or "").strip():
+            if child is node:
+                continue
+            has_text = bool((child.text or "").strip())
+            if not has_text and not child.attrib:
+                # A pure grouping element (no text of its own, no
+                # attributes) — e.g. the wrapper around Min/Max/Trend.
+                # Its children are still walked, since node.iter() does
+                # not stop at it; there is just nothing to record here.
                 continue
             key = child.tag
             if child.attrib:
-                # <Arrival_Departure Type="Departure"> — the attribute is
-                # what says whether "16 minutes" is arrivals or departures,
-                # which is most of the meaning.
+                # <Arrival_Departure Type="Departure"> carries no text of
+                # its own — its meaning is entirely in the attribute — and
+                # is exactly the case a text-only check drops silently.
+                # It's the qualifier that says whether "16 minutes" is
+                # arrivals or departures, which is most of the meaning.
                 key = f"{key}[{','.join(child.attrib.values())}]"
-            detail[key] = child.text.strip()
+            detail[key] = child.text.strip() if has_text else True
         events.append({"category": category_of(node), "element": node.tag, "detail": detail})
 
     return {

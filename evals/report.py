@@ -54,12 +54,21 @@ def render_markdown(result: SuiteResult, title: str = "Eval suite results") -> s
     )
     lines.append("")
     _cost = result.total_cost_usd
+    # "not measured" and NOT "no API calls billed" — that phrasing was
+    # false for exactly the run most likely to use it. LLM_PROVIDER=mock
+    # only stops the AGENT from calling a real model; every judge-graded
+    # task still builds its own OpenAILLMProvider (see
+    # evals/graders/llm_judge.py get_judge_provider) and bills it
+    # whenever an API key is on disk, which is the normal configured
+    # state — this run's cost figure never counted those tokens even when
+    # they were real and billed.
     lines.append(
-        f"**Cost: {'not measured (no API calls billed)' if _cost is None else f'${_cost:.4f}'} — "
+        f"**Agent cost: {'not measured (mock provider)' if _cost is None else f'${_cost:.4f}'} — "
         f"latency p50 {result.p50_latency_seconds:.2f}s, p95 {result.p95_latency_seconds:.2f}s, "
         f"total {result.total_latency_seconds:.1f}s.** "
-        "(Agent time only; LLM-judge grading is timed separately so a slow judge "
-        "can't masquerade as a slow agent.)"
+        "(Agent time and cost only. LLM-judge grading calls a SEPARATE provider instance and is "
+        "neither timed nor cost-tracked here — if an OpenAI key is configured, judge-graded tasks "
+        "make real, billed API calls regardless of --provider, including under mock.)"
     )
     lines.append("")
 

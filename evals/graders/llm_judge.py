@@ -35,7 +35,13 @@ from evals.types import GradeResult, Grader, Outcome, Task
 
 logger = logging.getLogger("evals.llm_judge")
 
-_SCORE_RE = re.compile(r"SCORE:\s*(\d+)", re.I)
+# Loose enough to survive a model wrapping its own instructed format in
+# markdown ("**SCORE:** 8", "SCORE: **8**") — both were observed to parse
+# as None under the strict version, and a parse failure returns score=0.0
+# / passed=False, indistinguishable in the aggregate pass rate from a
+# genuine grading failure. \**{0,2} eats up to two asterisks on either
+# side of the colon or the number without accepting arbitrary markup.
+_SCORE_RE = re.compile(r"SCORE\s*\**\s*:\s*\**\s*(\d+)", re.I)
 _RATIONALE_RE = re.compile(r"RATIONALE:\s*(.+)", re.I | re.S)
 
 _judge_provider_cache: Any = None

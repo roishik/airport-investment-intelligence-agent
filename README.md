@@ -7,9 +7,9 @@ choose tools, resolve what the user meant, and explain numbers it never
 computed.
 
 **Headline finding:** under the default headroom-weighted criteria, the
-biggest airport does not automatically win — LAX ranks **67th of 144**
+biggest airport does not automatically win — LAX ranks **69th of 144**
 eligible airports, and the actual top two (Nashville and Denver) are
-0.42% apart, with every one of the five weights able to flip that order
+0.41% apart, with every one of the five weights able to flip that order
 at a 5–10% change. See `DESIGN_DOC.md` §2 for the full sensitivity
 analysis.
 
@@ -44,6 +44,8 @@ app/
   scoring.py            pure deterministic ranking — zero I/O, zero LLM
   analytics.py          pure filter / aggregate / derived-metric contracts
   entity_resolution.py  pure fuzzy name -> id matching with a confidence bar
+  runway_geometry.py    parallel-runway separation + arrival-capacity model
+  dataset.py            loads data/ into the in-memory tables every tool reads
   tools.py              the tool surface: fetches data, calls the pure
                           modules, returns per-component breakdowns
   guardrails.py         untrusted-data wrapping + injection pre-filter
@@ -60,6 +62,9 @@ app/
 static/index.html       the web UI: chat + live tool-call log + voice controls
 static/markdown.js      renders the agent's markdown replies (escape-first)
 static/voice.js         mic capture, endpointing, playback, barge-in
+data/                    the committed dataset app/dataset.py reads — refresh with refresh_data.py
+scripts/                 smoke_test.py, run_example_questions.py, calibrate_resolver.py
+artifacts/               saved output of scripts/run_example_questions.py
 evals/                  runnable eval harness — 26 seeded failure-mode tasks
 tests/                  pytest suite
 ```

@@ -68,7 +68,7 @@ Net effect: the two genuinely decorrelated, forward-looking criteria
 (`traffic_growth` + `regional_demand_growth`) carry **50%** of the
 weight; the two size-flavoured ones (`capacity_pressure` +
 `absolute_scale`, themselves correlated with each other) carry **30%**.
-Sanity check that this works as intended: **LAX ranks 67th of 144**, not
+Sanity check that this works as intended: **LAX ranks 69th of 144**, not
 1st — a pure size-ranking would put it first every time.
 
 ### Normalization and missing data
@@ -105,7 +105,7 @@ absolute_scale           15              1.05
 ```
 
 **The headline finding is not a defect to explain away: the #1 slot is
-not decisive.** BNA and DEN are 0.42% apart, and every one of the five
+not decisive.** BNA and DEN are 0.41% apart, and every one of the five
 weights flips the winner at a 5–10% change — there is no weight in this
 configuration that could move by 10% without changing which airport
 leads. That is the honest answer to "why these weights": the *ranking's
@@ -120,7 +120,7 @@ overall shape* is what the weights are defending, not a specific #1.
 | `catchment_monopoly` | 0.836 | BNA→DEN | 0.770 | no |
 | `absolute_scale` | 0.915 | no | 0.874 | BNA→DEN |
 
-Kendall tau stays **0.77–0.92** even when a single criterion's weight is
+Kendall tau stays **0.77–0.91** even when a single criterion's weight is
 halved or doubled — the overall ordering is far more stable than the top
 slot, which is the real defence: the weighting judgement is load-bearing
 but not fragile. **Consequence for the product, not just the writeup:**
@@ -160,9 +160,17 @@ merely requested:
 1. **Tools never return a bare score.** Every result carries raw value,
    normalized score, weight, and contribution per component. The model
    always has the arithmetic in hand, so it never needs to reconstruct it.
-2. **The model cannot invent an identifier.** It has no way to enumerate
-   airport IDs from memory — `find_items` and `resolve_entity` are the
-   only routes to one, and both come from the dataset.
+2. **An invented identifier fails loudly instead of silently.** The
+   system prompt instructs the model to call `resolve_entity` rather than
+   typing an id from memory, and in practice it usually does — but
+   nothing enforces that mechanically, and it is not airtight: real eval
+   transcripts show `gpt-4o-mini` occasionally supplying a well-known
+   code like `LAX` or `SFO` directly, correctly, from its own training
+   data, skipping the resolver. The actual guarantee is one step weaker
+   than "cannot invent an id": if a wrong or unknown id ever reaches a
+   tool, `compare_items` raises `UnknownItemError` rather than silently
+   scoring nothing or a wrong airport — a fabricated id fails the call
+   instead of producing a fabricated answer. See DECISIONS.md.
 
 ### Model choice
 
@@ -170,8 +178,11 @@ Default: **OpenAI `gpt-4o-mini`** (`LLM_PROVIDER=openai`) — small,
 cheap, fast, and it's a genuine tool-calling model, which is the one
 capability this whole design leans on; the task never needs the model's
 own reasoning to be deep, only its tool selection and language to be
-reliable. Real cost from the P4 eval run: 23 tasks, both the agent and
-an independent LLM-judge grading pass, **$0.0205 total**.
+reliable. Real cost from the P4 eval run: 26 tasks, **$0.028 for the
+agent's own tool-calling turns** (see `evals/results/`). That figure is
+agent-only — the LLM-judge grading pass calls a separate provider
+instance (`evals/graders/llm_judge.py`) whose token usage this harness
+does not sum into the reported cost; see `evals/README.md`'s cost note.
 
 Two swap paths, both real, not hypothetical:
 
@@ -393,20 +404,22 @@ deterministic graders plus an LLM judge validated against hand labels.
 "is v2 of this prompt better than v1" an answerable question rather than
 an opinion. See `evaluation_plan.md`.
 
-**Real numbers, 2026-08-18, against the real 515-airport dataset**
-(`evals/results/openai_20260818T191158Z.md`,
-`evals/results/mock_20260818T191251Z.md`):
+**Real numbers, 2026-08-19, against the real 515-airport dataset**
+(`evals/results/openai_20260819T055640Z.md`,
+`evals/results/mock_20260819T055255Z.md`):
 
 | Provider | Pass rate | Avg partial-credit score |
 |---|---|---|
-| `openai` (gpt-4o-mini) | **24/26 = 92%** | 0.97 |
-| `mock` (scripted stand-in, not real reasoning) | 9/26 = 35% | 0.81 |
+| `openai` (gpt-4o-mini) | **24/26 = 92%** | 0.96 |
+| `mock` (scripted stand-in, not real reasoning) | 16/26 = 62% | 0.83 |
+
+The two `openai` failures are genuine, not harness noise, and are left failing on purpose rather than
+graded away — see `evals/README.md`'s results table for what they are and why.
 
 **Judge-vs-human agreement** (`evals/judge_validation.py`, 10 hand-labeled
 examples): **90% binary pass/fail agreement, mean absolute score
-difference 0.80** (1–10 scale) — clears the "intern test" ≥80% bar the
-research this program is based on treats as "the rubric is specific
-enough to automate."
+difference 0.90** (1–10 scale) — clears a common "intern test" ≥80% bar
+for treating an LLM-judge rubric as specific enough to automate.
 
 Two real bugs were found and fixed by running this suite against the
 real domain data (a `find_items` crash on empty-filter calls, and a

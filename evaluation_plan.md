@@ -1,10 +1,11 @@
 # Evaluation plan — Airport Investment Intelligence Agent
 
-Modeled on the Dec-2025 candidate submission's `evaluation_plan.md`, which is
-cheap to write and expensive to skip — production agent platforms ship
-"testing and evaluation at every step." Unlike that reference submission,
-this one is backed by a runnable harness (`evals/`), not a hand-filled
-matrix — every row below is a real, reproducible result, not an intention.
+An evaluation plan is cheap to write and expensive to skip — production
+agent platforms ship "testing and evaluation at every step," and a plan
+that only describes intended tests without running them is a common
+shortcut worth avoiding. This one is backed by a runnable harness
+(`evals/`), not a hand-filled matrix — every row below is a real,
+reproducible result, not an intention.
 
 ## 1. Scope of this evaluation
 
@@ -18,12 +19,12 @@ for the category breakdown and rationale.
 Explicitly out of scope: a live human-eval panel, an A/B test between
 prompt versions in production, load/concurrency testing, and eval against
 real user paraphrasing beyond the 26 seeded phrasings. This is a
-single-rep sanity pass, not a production evaluation program — see §7.
+single build's sanity pass, not a production evaluation program — see §7.
 
 ## 2. Deterministic scoring correctness (cheapest, do this first)
 
 Covered by `tests/test_scoring.py` (51 tests) and the domain-specific
-`tests/test_tools_domain.py` (34 tests, incl. the SFO runway-geometry and
+`tests/test_tools_domain.py` (46 tests, incl. the SFO runway-geometry and
 unmet-demand model). Run with:
 
 ```bash
@@ -84,7 +85,7 @@ brief's own example questions specifically, captured end-to-end
 For the broader 26-task automated matrix (ambiguous-query handling, tool
 selection under off-topic questions, missing-data/unknown-id handling,
 self-computation refusal, explanation quality, max-turns robustness),
-see `evals/results/openai_20260818T191158Z.md` — 24/26 pass, 0.97 avg
+see `evals/results/openai_20260819T055640Z.md` — 24/26 pass, 0.96 avg
 partial-credit score.
 
 ## 5. Safety / governance stress tests
@@ -100,9 +101,11 @@ partial-credit score.
   tested shapes (§3) — `SystemPromptNotLeakedGrader` / `InjectionFlaggedInTraceGrader`
   both pass under the real provider.
 - **Does the agent handle a tool exception without crashing the
-  process?** Yes — `app/tools.py`'s `TOOL_REGISTRY` catches exceptions
-  and returns `{"error": ...}` as tool-result data rather than raising
-  into the loop (`tests/test_agent_loop.py`), and `agent_loop.py`'s
+  process?** Yes — `app/tools.py`'s `TOOL_REGISTRY` entries can raise
+  (they are plain dict lambdas with no try/except of their own), and
+  `app/agent_loop.py`'s dispatch loop is what catches the exception and
+  returns `{"error": ...}` as tool-result data rather than propagating it
+  (`tests/test_agent_loop.py`), and `agent_loop.py`'s
   `max_turns` hard-stop is itself covered by the `robustness` eval
   category. `main.py`'s `/chat` endpoint additionally catches
   `MaxTurnsExceeded` and returns the partial answer plus the tool log
@@ -130,7 +133,7 @@ partial-credit score.
 - **No eval against real user paraphrasing variance** — only the 26
   seeded phrasings (plus the brief's own 4 questions) were tried. A
   production system would need a broader, ideally user-sourced, set.
-- **The judge-calibration set is n=10.** 90%/0.80 mean error is a real
+- **The judge-calibration set is n=10.** 90%/0.90 mean error is a real
   measurement of *this* rubric on *this* set, not a general accuracy
   claim — see `evals/README.md`'s stated limitation on overfitting risk.
 - **One genuine, unresolved product gap:**
@@ -139,13 +142,20 @@ partial-credit score.
   aren't already packed") without naming airports, `gpt-4o-mini` ranks
   on default weights instead of calling `rank_by_priorities` (the tool
   exists) or saying it used defaults. Left open rather than special-cased.
-- **One task showed a single-run flip, not yet confirmed as
-  non-deterministic vs. a real intermittent gap:**
-  `self_computation_asked_for_rough_guess` passed at 16:52 and failed at
-  19:11 on the same day. Needs a `--trials 5` re-run before concluding
-  either way (see `evals/README.md`).
+- **A second genuine, left-open gap:** `self_computation_pressured_to_skip_tool`
+  — pressured to skip the tool with no specific airports named,
+  `gpt-4o-mini` cleanly refuses ("I can't provide estimates or rankings
+  without using the appropriate tools") rather than making a reasonable
+  default tool call. Not a NEVER_COMPUTE_RULE violation, but a real
+  usability gap. See the task's own `notes` in `evals/tasks/seed_tasks.py`.
+- **One task shows run-to-run non-determinism, not yet resolved:**
+  `self_computation_asked_for_rough_guess` has flipped pass/fail across
+  runs. Needs a `--trials 5` re-run before concluding whether this is
+  temperature noise or a real intermittent gap (see `evals/README.md`).
 - **No load/concurrency testing** — chat history is single-session,
-  in-memory (`app/main.py`); see `ASSUMPTIONS.md`.
-- **No eval of the voice path** (`static/index.html`'s Web Speech API
-  integration) — the harness tests the agent/tool layer, not
-  browser-side STT/TTS behavior.
+  in-memory (`app/conversation.py`); see `ASSUMPTIONS.md`.
+- **No eval of the voice path** — neither the browser-native mode nor
+  the server-side conversation mode (`app/voice_api.py`,
+  `static/voice.js`) is exercised by the eval harness, which tests the
+  agent/tool layer only. The voice-specific code has its own pytest
+  coverage instead (`tests/test_voice_api.py`, `tests/test_voice_client.py`).

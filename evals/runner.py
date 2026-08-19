@@ -23,10 +23,27 @@ from app.agent_loop import AgentResult, MaxTurnsExceeded, run_agent
 from app.providers.llm.base import LLMProvider
 from app.system_prompt import BASE_SYSTEM_PROMPT
 from app.tools import TOOL_REGISTRY, TOOL_SCHEMAS
-from evals.graders.deterministic import ToolCallGrader
+from evals.graders.deterministic import ToolCallGrader, _extract_stated_numbers
 from evals.types import Outcome, Task, Trace, Trial, TrialResult
 
-_DECIMAL_RE = re.compile(r"-?\d+\.\d+")
+# Shares its extraction with NoFabricatedNumbersGrader rather than
+# keeping a second, looser regex here. Two independent number-extractors
+# on the same text is how this field went unnoticed as dead: it was
+# populated by this simpler pattern and read by nothing, while the real
+# fabrication check used its own copy in evals/graders/deterministic.py.
+# One source of truth now — Outcome.numbers_in_text and the grader's own
+# extraction can no longer silently disagree.
+
+
+# Deliberately separate from _extract_stated_numbers (which this module
+# also uses, below): that one parses MODEL PROSE, where "36,497,303.0"
+# and "4.68%" are real formatting a human-facing sentence uses and must
+# be normalized. This one parses json.dumps() of a tool's own return
+# value, which is never comma-grouped or percent-suffixed — it is
+# whatever repr Python's json encoder produces — so a plain decimal
+# pattern is both sufficient and correct here; reusing the prose pattern
+# would be reusing normalization logic this text doesn't need.
+_JSON_DECIMAL_RE = re.compile(r"-?\d+\.\d+")
 
 
 def _numbers_in(obj: Any) -> tuple[float, ...]:
@@ -37,7 +54,7 @@ def _numbers_in(obj: Any) -> tuple[float, ...]:
         text = json.dumps(obj, default=str)
     except TypeError:
         text = str(obj)
-    return tuple(float(m) for m in _DECIMAL_RE.findall(text))
+    return tuple(float(m) for m in _JSON_DECIMAL_RE.findall(text))
 
 
 def _run_agent_task(task: Task, provider: LLMProvider) -> Trace:
@@ -71,7 +88,7 @@ def _run_agent_task(task: Task, provider: LLMProvider) -> Trace:
 def _outcome_from_trace(trace: Trace) -> Outcome:
     tools_called = tuple(e.tool_name for e in trace.tool_log)
     tool_args_by_call = tuple((e.tool_name, dict(e.arguments)) for e in trace.tool_log)
-    numbers_in_text = tuple(float(m) for m in _DECIMAL_RE.findall(trace.final_text))
+    numbers_in_text = tuple(_extract_stated_numbers(trace.final_text))
     numbers_in_tool_outputs: list[float] = []
     for e in trace.tool_log:
         if e.error is None:

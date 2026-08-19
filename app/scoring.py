@@ -1,7 +1,7 @@
 """
 scoring.py — deterministic scoring / ranking logic.
 
-RULES FOR THIS FILE (do not violate when adapting it for a real rep):
+RULES FOR THIS FILE, enforced by construction, not just convention:
   1. ZERO I/O. No network calls, no file reads, no env var reads, no
      imports of requests/httpx/openai/anthropic/os (other than typing).
   2. ZERO LLM calls. This file must be understandable and fully testable
@@ -14,13 +14,12 @@ RULES FOR THIS FILE (do not violate when adapting it for a real rep):
      from the brief. Point to this file, and to test_scoring.py, when
      asked "what part of your ranking is NOT the LLM?"
 
-Adapt this by:
-  - keeping the Criterion / ComponentBreakdown / ScoreResult / RankedItem
-    shapes (tools.py and the LLM-facing explanations depend on this shape)
-  - replacing DEFAULT-style example criteria in tools.py with the real
-    assignment's KPIs (see tools.py, DESIGN_DOC.md)
-  - keeping every existing unit test passing after your edits, and adding
-    new ones for whatever domain-specific normalization you introduce
+The Criterion / ComponentBreakdown / ScoreResult / RankedItem shapes here
+are the contract app/tools.py and every LLM-facing explanation depend on
+— DEFAULT_CRITERIA in tools.py supplies this domain's five real KPIs
+(traffic growth, regional demand growth, catchment monopoly, capacity
+pressure, absolute scale; see DESIGN_DOC.md §2), and nothing in this file
+knows or cares what any of them mean.
 """
 from __future__ import annotations
 

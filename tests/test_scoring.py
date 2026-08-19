@@ -539,3 +539,93 @@ def test_emphasis_actually_changes_the_ranking_when_it_should():
     )
     assert default.ranked[0].item_id == "pricey_great"
     assert cost_first.ranked[0].item_id == "cheap_ok"
+
+
+# ── The arithmetic itself ───────────────────────────────────────────────
+# These exist because of a hole found by mutation testing: changing
+# `contribution = normalized_score * weight` to `normalized_score ** 2 *
+# weight` — which moves LAX's real score from 0.3584 to 0.3111 — left the
+# entire suite green.
+#
+# The reason is subtle and worth stating, because it is a trap any
+# numeric test suite can fall into. Every numeric assertion in this file
+# used raw values that normalize to exactly 0.0, 0.5, or 1.0, and those
+# are precisely the fixed points where x**2 == x. Everything else
+# asserted on ORDERING, and squaring is monotone, so the order never
+# moved either. The suite tested the shape of the formula thoroughly and
+# its value not at all.
+#
+# The fix is to pin at least one case whose normalized scores are none of
+# 0, 0.5, or 1, with the arithmetic written out longhand so the expected
+# number is derived here rather than copied from a run.
+
+
+def test_weighted_score_matches_arithmetic_done_by_hand():
+    """One item, two criteria, no missing data, nothing degenerate.
+
+    a = 3 on a 0..10 scale  -> normalized 0.30
+    b = 70 on a 0..100 scale -> normalized 0.70
+    weights 2 and 1         -> normalized 2/3 and 1/3
+    total = 0.30*(2/3) + 0.70*(1/3) = 0.20 + 0.2333... = 0.43333...
+
+    Deliberately chosen so no normalized value is 0, 0.5, or 1 — the
+    three points at which a squared-contribution bug is invisible.
+    """
+    criteria = [
+        Criterion(name="a", weight=2, lower_bound=0.0, upper_bound=10.0),
+        Criterion(name="b", weight=1, lower_bound=0.0, upper_bound=100.0),
+    ]
+    result = rank_items({"x": {"a": 3.0, "b": 70.0}}, criteria)
+    scored = result.ranked[0]
+
+    assert scored.total_score == pytest.approx(0.43333333, abs=1e-8)
+
+    by_name = {c.criterion: c for c in scored.components}
+    assert by_name["a"].normalized_score == pytest.approx(0.30, abs=1e-9)
+    assert by_name["a"].weight == pytest.approx(2 / 3, abs=1e-9)
+    assert by_name["a"].contribution == pytest.approx(0.20, abs=1e-9)
+    assert by_name["b"].normalized_score == pytest.approx(0.70, abs=1e-9)
+    assert by_name["b"].weight == pytest.approx(1 / 3, abs=1e-9)
+    assert by_name["b"].contribution == pytest.approx(0.23333333, abs=1e-8)
+
+    # The whole is exactly the sum of its parts. This is the property the
+    # explanations depend on: the model reconstructs the total from the
+    # breakdown, so if they ever disagree the explanation is fiction.
+    assert sum(c.contribution for c in scored.components) == pytest.approx(
+        scored.total_score, abs=1e-12
+    )
+
+
+def test_contribution_is_linear_in_the_normalized_score():
+    """Doubling one criterion's normalized input doubles its contribution.
+
+    This is what fails under any exponent other than 1, at any value —
+    it does not depend on choosing a lucky test point.
+    """
+    criteria = [Criterion(name="a", weight=1, lower_bound=0.0, upper_bound=10.0)]
+    low = rank_items({"x": {"a": 2.0}}, criteria).ranked[0]
+    high = rank_items({"x": {"a": 4.0}}, criteria).ranked[0]
+    assert high.components[0].contribution == pytest.approx(
+        2 * low.components[0].contribution, abs=1e-12
+    )
+
+
+def test_real_dataset_scores_are_pinned_to_known_values():
+    """A regression pin on the shipped data, not on a synthetic fixture.
+
+    These two numbers appear in README.md, DESIGN_DOC.md and the eval
+    suite. Until now nothing in pytest checked them, so a change to the
+    scoring core would have been caught only by an eval run against a
+    paid API. This is the same check, offline and free.
+
+    If the DATA is refreshed these values will move, and that is correct:
+    the test should then be updated deliberately, having noticed.
+    """
+    from app import dataset
+    from app.tools import DEFAULT_CRITERIA, fetch_item_metrics
+
+    items = {i: fetch_item_metrics(i) for i in ("LAX", "SNA")}
+    ranked = {r.item_id: r for r in rank_items(items, DEFAULT_CRITERIA).ranked}
+    assert round(ranked["LAX"].total_score, 4) == 0.3584
+    assert round(ranked["SNA"].total_score, 4) == 0.2917
+    assert len(dataset.ELIGIBLE_IDS) == 144

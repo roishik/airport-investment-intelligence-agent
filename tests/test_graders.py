@@ -145,3 +145,53 @@ def test_extract_stated_numbers_handles_commas_and_percent():
         "SFO scores 9,124,325.75 with traffic growth of 4.68% and a plain 0.3584 total."
     )
     assert out == pytest.approx([9124325.75, 0.0468, 0.3584])
+
+
+# ── judge_text's response parser ─────────────────────────────────────────
+# Every judge score in the project flows through this. Untested before —
+# a parse failure returns score=0.0/passed=False, indistinguishable in an
+# aggregate pass rate from the model genuinely failing the rubric.
+def test_judge_text_parses_the_plain_instructed_format():
+    from evals.graders.llm_judge import judge_text
+
+    class FakeProvider:
+        def chat(self, messages, tools=None):
+            class R:
+                content = "SCORE: 8\nRATIONALE: solid answer, minor phrasing issue."
+            return R()
+
+    score, rationale = judge_text(FakeProvider(), "prompt")
+    assert score == 8
+    assert "solid answer" in rationale
+
+
+def test_judge_text_survives_markdown_wrapping_around_score():
+    """Observed in practice: a judge model wraps its own instructed
+    format in bold. The strict `SCORE:\\s*(\\d+)` form returns None for
+    both of these, which folds a parse failure into a 0.0 grade
+    indistinguishable from the judge actually failing the rubric."""
+    from evals.graders.llm_judge import judge_text
+
+    for wrapped in ("**SCORE:** 8\nRATIONALE: ok.", "SCORE: **8**\nRATIONALE: ok."):
+        class FakeProvider:
+            def chat(self, messages, tools=None, _text=wrapped):
+                class R:
+                    content = _text
+                return R()
+
+        score, _ = judge_text(FakeProvider(), "prompt")
+        assert score == 8, f"failed to parse: {wrapped!r}"
+
+
+def test_judge_text_returns_none_score_on_a_genuinely_unparseable_response():
+    from evals.graders.llm_judge import judge_text
+
+    class FakeProvider:
+        def chat(self, messages, tools=None):
+            class R:
+                content = "I think this is pretty good overall."
+            return R()
+
+    score, rationale = judge_text(FakeProvider(), "prompt")
+    assert score is None
+    assert rationale  # falls back to the raw text rather than being empty

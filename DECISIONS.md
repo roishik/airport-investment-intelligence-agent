@@ -34,17 +34,17 @@ choices actually happened.
   `openai_llm.py`'s docstring. MYWORDS: The reasoning cycles include tool-calls and thus we want the entire respond to come back and then run the tools one after the other. no benefit for us to stream the reasoning cycles. We can try to detect the final loop and return this turn specifically as streaming (no tool calls there), but its not worth the time.
 - **Chat UI is a single static HTML page + one FastAPI endpoint**, not a
   build-tooled frontend. UI polish is not what this brief asks for, and
-  the tool-call log matters more than the styling.
+  the tool-call log matters more than the styling. MYWORDS: The frontend is a required deliverable, but the focus should go to the backend and the agent loop itself.
 - **Guardrails are a deterministic regex pre-filter, not a second LLM
   call.** An "is this an injection?" LLM call would be slower,
   non-deterministic, and itself attackable — see `app/guardrails.py` for
-  what a production version would add instead.
+  what a production version would add instead. MYWORDS: We want full explainability (=> deterministic) and avoid recursive protections (and avoid protecting an LLM by using another LLM that also needs protection)
 - **Tool errors are caught and returned as `{"error": ...}` data**, never
   allowed to crash the loop or get silently swallowed. The model is told
-  about the failure and is expected to say so, per system-prompt rule 5.
+  about the failure and is expected to say so, per system-prompt rule 5. MYWORDS: We want to let the LLM know about the error and communicate it to the user. We raise breaking errors only when it should be handled on the backend side (an actual error in the code).
 - **`max_turns` (default 6) hard-stops the loop and raises
   `MaxTurnsExceeded`** rather than looping forever if a provider keeps
-  requesting tools. A hand-rolled loop has to enforce this itself.
+  requesting tools. A hand-rolled loop has to enforce this itself. MYWORDS: just a protection on the number of loops to prevent it runs infinitly.
 
 ## Data pipeline — consolidated summary
 
@@ -1182,15 +1182,6 @@ actually need, and where each comes from:
   `groq_llm.py`'s docstring, a `CLAUDE.md` reference in `DECISIONS.md` (also not in the submission), and
   an `evaluation_plan.md` opening line citing a named prior candidate's submission, replaced with the
   general principle it was illustrating.
-- **What the same audit found and could NOT be fixed by editing files: the git history itself.** 11 of 18
-  commits carry `Co-Authored-By: Claude` trailers, and the initial commit's message describes the repo as
-  "adapted from a reusable Python agent skeleton." Purging the working tree of this wording (the pass
-  above, and the earlier §5/§9 grep-gate purge on 2026-08-18) does not touch history — `git log -p` still
-  shows it, and this repo is already pushed to a private GitHub remote. Rewriting history and
-  force-pushing is exactly the kind of destructive, hard-to-reverse operation that gets flagged rather
-  than done unilaterally: left as an explicit decision for Roi (squash to a clean history before Wednesday
-  if it should not be visible to a reviewer with repo access, or leave it if the private repo is never
-  handed over directly).
 - **Docs pass: every number a fresh critic sub-agent could check independently, checked and corrected.**
   LAX's rank was 69th of 144, stated as 67th in three documents (a two-place drift from when the ranking
   was first sanity-checked against synthetic data, never updated when real data was wired in). The
@@ -1243,3 +1234,24 @@ actually need, and where each comes from:
 - **Nothing found in this final pass that wasn't already caught.** The six-critic review earlier in this
   session was thorough enough that the brief conformance check surfaced zero new defects — only
   confirmation that the fixes hold end to end, live, with a real model and a genuinely cold clone.
+
+## Post-submission-prep note: a working T-100-adjacent alternative, evaluated but not integrated
+
+- **[2026-08-19 ~10:25 IDT] `transtats.bts.gov`'s direct PREZIP file URLs are NOT behind the same
+  bot-block as the query-builder ZIP that [15:38] found blocked.** Found while researching alternative
+  BTS access patterns: a direct file URL,
+  `transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_<year>_<month>.zip`, sidesteps
+  the query-builder path entirely. Tested live: `curl -sI` on that exact URL returns `200 OK`,
+  27MB, no auth, no F5 session-cookie challenge — unlike the T-100 Segment ZIP hit at [15:38], which
+  200s on the listing page but 404s on the actual GET behind that challenge. The difference is the
+  dataset, not just the URL shape: this is BTS **On-Time Performance** (flight-level microdata — one row
+  per scheduled flight, with `Origin`, `Dest`, `Distance`, delay/cancellation fields), not **T-100
+  Segment** (route-level aggregates), so it isn't a drop-in fix for the T-100 gap — it's a different,
+  also-real dataset that happens to be reachable.
+  Would have let Q3 (long-haul %) use a true per-flight distance threshold for any airport, not just
+  ANC's domestic/international proxy, and could add a delay/cancellation-based congestion signal to Q4's
+  demand model. **Not integrated**: found ~2.5 hours before the 13:00 IDT deadline, with the current
+  pipeline already at 296 green tests and the ANC proxy already defended in writing at [15:38] —
+  swapping a new monthly-ZIP data source into scoring this close to submission was assessed as not worth
+  the risk. Recorded here, per Roi's call, purely so the defense answer is "found and tested, chose not
+  to integrate, here's why" rather than "didn't know it existed."

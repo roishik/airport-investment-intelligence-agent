@@ -1,26 +1,28 @@
 {
-  "generated_at": "2026-08-18T19:05:45",
+  "generated_at": "2026-08-19T10:44:54",
   "provider": "openai",
   "model": "gpt-4o-mini",
   "transcripts": [
     {
       "id": "Q1",
       "question": "Which airports in New England are strong candidates for terminal expansion?",
-      "answer": "The following airports in New England are strong candidates for terminal expansion based on their investment scores:\n\n1. **Boston Logan International Airport (BOS)**\n   - **Total Score:** 0.4386\n   - **Key Contributions:**\n     - **Traffic Growth:** Slight decline (-0.0033), but still contributes positively.\n     - **Regional Demand Growth:** Moderate growth (0.00588).\n     - **Catchment Monopoly:** Strong position (44.8).\n     - **Capacity Pressure:** High (4,204,230.6).\n     - **Absolute Scale:** Very large (21,021,153.0).\n\n2. **Portland International Jetport (PWM)**\n   - **Total Score:** 0.3465\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth (0.0533).\n     - **Regional Demand Growth:** Moderate growth (0.00821).\n     - **Catchment Monopoly:** Good position (47.0).\n     - **Capacity Pressure:** Lower compared to BOS (643,520.5).\n     - **Absolute Scale:** Smaller (1,287,041.0).\n\n3. **Manchester-Boston Regional Airport (MHT)**\n   - **Total Score:** 0.3084\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth (0.0826).\n     - **Regional Demand Growth:** Moderate growth (0.005).\n     - **Catchment Monopoly:** Moderate position (32.5).\n     - **Capacity Pressure:** Low (342,797.0).\n     - **Absolute Scale:** Smaller (685,594.0).\n\n4. **Bradley International Airport (BDL)**\n   - **Total Score:** 0.3002\n   - **Key Contributions:**\n     - **Traffic Growth:** Slight decline (-0.0005).\n     - **Regional Demand Growth:** Moderate growth (0.00647).\n     - **Catchment Monopoly:** Good position (47.4).\n     - **Capacity Pressure:** Moderate (1,641,698.5).\n     - **Absolute Scale:** Moderate (3,283,397.0).\n\n5. **T.F. Green Airport (PVD)**\n   - **Total Score:** 0.2859\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth (0.0667).\n     - **Regional Demand Growth:** Moderate growth (0.00409).\n     - **Catchment Monopoly:** Lower position (24.4).\n     - **Capacity Pressure:** Moderate (1,058,700.5).\n     - **Absolute Scale:** Moderate (2,117,401.0).\n\n### Summary\nBOS stands out as the top candidate due to its significant capacity pressure and absolute scale, despite a slight decline in traffic growth. PWM and MHT also show strong potential for expansion, particularly due to their traffic growth rates. BDL and PVD, while lower in the ranking, still present opportunities for investment based on their regional demand growth and catchment monopolies. \n\nNo airports were excluded from this analysis, ensuring a complete view of the eligible candidates.",
+      "answer": "The following airports in New England are strong candidates for terminal expansion based on their investment potential:\n\n1. **Boston Logan International Airport (BOS)**\n   - **Total Score:** 0.4386\n   - **Key Contributions:**\n     - **Traffic Growth:** Slight decline, but still a significant contributor.\n     - **Regional Demand Growth:** Positive growth, contributing to future demand.\n     - **Catchment Monopoly:** Strong position with a high score indicating limited competition.\n     - **Capacity Pressure:** High capacity pressure, suggesting a need for expansion.\n     - **Absolute Scale:** Large airport size, enhancing its importance.\n\n2. **Portland International Jetport (PWM)**\n   - **Total Score:** 0.3465\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth, indicating increasing passenger numbers.\n     - **Regional Demand Growth:** Positive growth, supporting future expansion.\n     - **Catchment Monopoly:** Good position with limited competition.\n     - **Capacity Pressure:** Lower capacity pressure compared to BOS, but still relevant.\n     - **Absolute Scale:** Smaller than BOS, but still significant.\n\n3. **Manchester-Boston Regional Airport (MHT)**\n   - **Total Score:** 0.3084\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth, indicating potential for increased capacity.\n     - **Regional Demand Growth:** Positive, but lower than BOS and PWM.\n     - **Catchment Monopoly:** Moderate competition.\n     - **Capacity Pressure:** Low capacity pressure, suggesting less immediate need for expansion.\n     - **Absolute Scale:** Smaller airport size.\n\n4. **Bradley International Airport (BDL)**\n   - **Total Score:** 0.3002\n   - **Key Contributions:**\n     - **Traffic Growth:** Slight decline, but still a contributor.\n     - **Regional Demand Growth:** Positive growth.\n     - **Catchment Monopoly:** Good position with limited competition.\n     - **Capacity Pressure:** Moderate pressure.\n     - **Absolute Scale:** Medium-sized airport.\n\n5. **T.F. Green Airport (PVD)**\n   - **Total Score:** 0.2859\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth.\n     - **Regional Demand Growth:** Positive, but lower than others.\n     - **Catchment Monopoly:** Moderate competition.\n     - **Capacity Pressure:** Moderate pressure.\n     - **Absolute Scale:** Medium-sized airport.\n\n6. **Burlington International Airport (BTV)**\n   - **Total Score:** 0.2015\n   - **Key Contributions:**\n     - **Traffic Growth:** Strong growth.\n     - **Regional Demand Growth:** Slight decline.\n     - **Catchment Monopoly:** Moderate competition.\n     - **Capacity Pressure:** Low pressure.\n     - **Absolute Scale:** Smaller airport.\n\nThese rankings reflect a combination of factors including traffic growth, regional demand growth, competition, capacity pressure, and the current size of the airports. All airports listed have sufficient data to support their ranking.",
       "turns": 3,
-      "seconds": 11.0,
+      "seconds": 13.4,
       "incomplete": false,
       "tool_calls": [
         {
           "tool": "find_items",
           "arguments": {
             "filters": {
+              "region": "Northeast",
               "new_england": "yes"
             }
           },
           "error": null,
           "result": {
             "filters": {
+              "region": "Northeast",
               "new_england": "yes"
             },
             "item_ids": [
@@ -67,10 +69,12 @@
             "item_ids": [
               "BDL",
               "BOS",
-              "PWM",
+              "BTV",
+              "MHT",
               "PVD",
-              "MHT"
-            ]
+              "PWM"
+            ],
+            "focus_criterion": ""
           },
           "error": null,
           "result": {
@@ -104,6 +108,7 @@
             "coverage_threshold": 0.5,
             "tied_at_top": [],
             "decisive": true,
+            "no_items_ranked": false,
             "tie_threshold": 0.005,
             "ineligible": [],
             "ranking": [
@@ -326,9 +331,54 @@
                     "contribution": 0.009
                   }
                 ]
+              },
+              {
+                "rank": 6,
+                "item_id": "BTV",
+                "total_score": 0.2015,
+                "covered_weight": 1.0,
+                "missing_criteria": [],
+                "components": [
+                  {
+                    "criterion": "traffic_growth",
+                    "raw_value": 0.0585,
+                    "normalized_score": 0.6329,
+                    "weight": 0.25,
+                    "contribution": 0.1582
+                  },
+                  {
+                    "criterion": "regional_demand_growth",
+                    "raw_value": -0.0012,
+                    "normalized_score": 0.0489,
+                    "weight": 0.25,
+                    "contribution": 0.0122
+                  },
+                  {
+                    "criterion": "catchment_monopoly",
+                    "raw_value": 19.8,
+                    "normalized_score": 0.1012,
+                    "weight": 0.2,
+                    "contribution": 0.0202
+                  },
+                  {
+                    "criterion": "capacity_pressure",
+                    "raw_value": 709881.0,
+                    "normalized_score": 0.0667,
+                    "weight": 0.15,
+                    "contribution": 0.01
+                  },
+                  {
+                    "criterion": "absolute_scale",
+                    "raw_value": 709881.0,
+                    "normalized_score": 0.0056,
+                    "weight": 0.15,
+                    "contribution": 0.0008
+                  }
+                ]
               }
             ],
-            "excluded": []
+            "excluded": [],
+            "focus": null
           }
         }
       ]
@@ -336,9 +386,9 @@
     {
       "id": "Q2",
       "question": "Compare LA and Santa Ana airport congestion levels.",
-      "answer": "The comparison of congestion levels between Los Angeles International Airport (LAX) and Santa Ana Airport (SNA) reveals the following:\n\n### Ranking and Scores\n1. **LAX**\n   - **Total Score:** 0.3584\n   - **Components:**\n     - **Traffic Growth:** \n       - Raw Value: -0.0335\n       - Normalized Score: 0.2089\n       - Contribution: 0.0522\n     - **Regional Demand Growth:** \n       - Raw Value: -0.00184\n       - Normalized Score: 0.0248\n       - Contribution: 0.0062\n     - **Catchment Monopoly:** \n       - Raw Value: 4.4\n       - Normalized Score: 0.0\n       - Contribution: 0.0\n     - **Capacity Pressure:** \n       - Raw Value: 9,124,325.75\n       - Normalized Score: 1.0\n       - Contribution: 0.15\n     - **Absolute Scale:** \n       - Raw Value: 36,497,303.0\n       - Normalized Score: 1.0\n       - Contribution: 0.15\n\n2. **SNA**\n   - **Total Score:** 0.2917\n   - **Components:**\n     - **Traffic Growth:** \n       - Raw Value: 0.0282\n       - Normalized Score: 0.4932\n       - Contribution: 0.1233\n     - **Regional Demand Growth:** \n       - Raw Value: -0.00071\n       - Normalized Score: 0.0673\n       - Contribution: 0.0168\n     - **Catchment Monopoly:** \n       - Raw Value: 18.9\n       - Normalized Score: 0.0912\n       - Contribution: 0.0182\n     - **Capacity Pressure:** \n       - Raw Value: 5,521,729.0\n       - Normalized Score: 0.698\n       - Contribution: 0.1047\n     - **Absolute Scale:** \n       - Raw Value: 5,521,729.0\n       - Normalized Score: 0.191\n       - Contribution: 0.0286\n\n### Analysis\n- **LAX** has a higher total score (0.3584) compared to **SNA** (0.2917), indicating that LAX experiences more congestion pressure overall.\n- **Capacity Pressure** is a significant factor for both airports, with LAX having a much higher raw value, indicating it handles a larger volume of traffic.\n- **Traffic Growth** is negative for LAX, suggesting a decline, while SNA shows positive growth, indicating a potential increase in demand.\n- **Catchment Monopoly** is notably higher for SNA, which may suggest it serves a more localized market effectively.\n\nIn summary, while LAX is currently more congested overall, SNA shows signs of growth and a strong local market presence.",
+      "answer": "I interpreted \"LA\" as referring to Los Angeles International Airport (LAX), which is the primary airport in the LA metro area. I will compare LAX with Santa Ana Airport (SNA) regarding congestion levels, specifically focusing on capacity pressure.\n\n### Capacity Pressure Comparison:\n- **LAX**:\n  - **Raw Value**: 9,124,325.75 passengers per air-carrier runway\n  - **Normalized Score**: 1.0\n  - **Rank**: 1\n\n- **SNA**:\n  - **Raw Value**: 5,521,729.0 passengers per air-carrier runway\n  - **Normalized Score**: 0.698\n  - **Rank**: 2\n\n### Summary:\nLAX has a higher capacity pressure score compared to SNA, indicating that it experiences more congestion relative to its runway capacity. This means that LAX is more congested than SNA, which could suggest a greater need for expansion or renovation to alleviate congestion issues. \n\nIf you have any further questions or need additional comparisons, feel free to ask!",
       "turns": 3,
-      "seconds": 10.9,
+      "seconds": 6.5,
       "incomplete": false,
       "tool_calls": [
         {
@@ -472,7 +522,8 @@
             "item_ids": [
               "LAX",
               "SNA"
-            ]
+            ],
+            "focus_criterion": "capacity_pressure"
           },
           "error": null,
           "result": {
@@ -506,6 +557,7 @@
             "coverage_threshold": 0.5,
             "tied_at_top": [],
             "decisive": true,
+            "no_items_ranked": false,
             "tie_threshold": 0.005,
             "ineligible": [],
             "ranking": [
@@ -598,7 +650,31 @@
                 ]
               }
             ],
-            "excluded": []
+            "excluded": [],
+            "focus": {
+              "criterion": "capacity_pressure",
+              "description": "Passengers per air-carrier runway, a congestion proxy. Correlates with absolute_scale (r=0.89), so held to a smaller weight on purpose.",
+              "weight_in_total_score": 15,
+              "higher_is_better_for_investment": true,
+              "ranked_by_this_criterion_alone": [
+                {
+                  "item_id": "LAX",
+                  "raw_value": 9124325.75,
+                  "normalized_score": 1.0,
+                  "rank_on_criterion": 1
+                },
+                {
+                  "item_id": "SNA",
+                  "raw_value": 5521729.0,
+                  "normalized_score": 0.698,
+                  "rank_on_criterion": 2
+                }
+              ],
+              "highest": "LAX",
+              "lowest": "SNA",
+              "no_data_for": [],
+              "note": "This ordering is on capacity_pressure alone. It is NOT the total expansion score, which blends all 5 criteria and answers a different question. Report this ordering, and do not describe total_score as a measure of capacity_pressure."
+            }
           }
         }
       ]
@@ -606,9 +682,9 @@
     {
       "id": "Q3",
       "question": "What is the percentage of long haul flights out of Anchorage?",
-      "answer": "The percentage of long-haul flights out of Anchorage (ANC) can be approximated by looking at the share of international flights, which serves as a proxy for long-haul travel. Currently, about **15.99%** of flights from Anchorage are international.\n\nIt's important to note that this figure is a proxy for long-haul flights, as \"long haul\" is not a defined category in the dataset. The average distance for outbound international flights from Anchorage is significantly longer (around 4,322 miles) compared to domestic flights (averaging 1,458 miles). Therefore, while the international share gives a sense of long-haul traffic, it may understate the total number of long flights, especially since many domestic routes are also relatively long.",
+      "answer": "The percentage of long-haul flights out of Anchorage (ANC) is represented by the share of international flights, which is approximately **15.99%**. \n\nIt's important to note that this figure serves as a proxy for long-haul flights. The average distance for outbound international flights from Anchorage is about 4,322 miles, while domestic flights average around 1,458 miles. This means that the international share may understate the actual number of long flights, as many domestic routes are also relatively long, such as Anchorage to Seattle, which is approximately 1,448 miles.",
       "turns": 3,
-      "seconds": 3.9,
+      "seconds": 4.4,
       "incomplete": false,
       "tool_calls": [
         {
@@ -616,13 +692,13 @@
           "arguments": {
             "item_id": "ANC",
             "operation": "share",
-            "category": "long haul"
+            "category": "long_haul"
           },
           "error": null,
           "result": {
             "item_id": "ANC",
             "operation": "share",
-            "category": "long haul",
+            "category": "long_haul",
             "value": null,
             "defined": false,
             "known_categories": [
@@ -631,7 +707,7 @@
             ],
             "unknown_category": true,
             "category_semantics": "Categories are 'domestic' and 'international' departures. For a LONG-HAUL question, international share is the available proxy: Anchorage's outbound international flights averaged 4,322 mi in 2025 (trans-Pacific cargo and passenger routes) against 1,458 mi for domestic. State that this is a domestic/international split used as a long-haul proxy, NOT a true distance-threshold percentage \u2014 per-route distances are not in any public BTS table. Note too that the domestic average is itself long-haul-heavy (Anchorage-Seattle alone is ~1,448 mi), so the international share UNDERSTATES how many long flights leave Anchorage.",
-            "guidance": "'long haul' is not a category in this dataset \u2014 the available categories are ['domestic', 'international']. This is NOT the same as a zero result: do not report '0%' or 'none'. Read 'category_semantics' above: it says which available category is the right proxy for what was asked. Call this tool again with that category and answer the question \u2014 do not stop to ask the user which category they want when the semantics already say which one applies. Then state plainly that the figure is a proxy and what its limitation is."
+            "guidance": "'long_haul' is not a category in this dataset \u2014 the available categories are ['domestic', 'international']. This is NOT the same as a zero result: do not report '0%' or 'none'. Read 'category_semantics' above: it says which available category is the right proxy for what was asked. Call this tool again with that category and answer the question \u2014 do not stop to ask the user which category they want when the semantics already say which one applies. Then state plainly that the figure is a proxy and what its limitation is."
           }
         },
         {
@@ -666,9 +742,9 @@
     {
       "id": "Q4",
       "question": "What is the unmet flight demand in SFO and why?",
-      "answer": "The unmet flight demand at San Francisco International Airport (SFO) is estimated to be approximately **1,278,222 annual enplanements**. This figure represents the demand that cannot be accommodated due to specific constraints at the airport.\n\n### Reasons for Unmet Demand:\n\n1. **Weather-Suppressed Throughput**: \n   - The primary factor contributing to unmet demand is the **weather-suppressed throughput**. The airport's parallel runways are too close together, which significantly reduces arrival capacity during low visibility conditions. Specifically, arrival capacity drops by **50%** during these times. This situation occurs about **12% of the year**, leading to a substantial number of flights that cannot be scheduled when visibility is poor.\n\n2. **Structural Capacity Deficit**: \n   - There is no structural capacity deficit identified in the current model. This means that under normal conditions, the airport's infrastructure can handle the projected demand based on its traffic growth and regional population growth. However, the unmet demand figure primarily arises from the weather-related constraints rather than a lack of overall capacity.\n\n### Model Assumptions:\n- The estimate is based on a projected demand growth of **4.7%** for the airport and **0.51%** for the county's population.\n- The model assumes that the airport can sustain **7,800,000 annual enplanements** under ideal conditions, which is the 95th percentile achieved across eligible airports.\n- The estimate is considered a **lower bound** because it does not account for demand that airlines may choose not to schedule due to known constraints, nor does it include passengers who might opt for competing airports.\n\n### Confidence Level:\n- The confidence in this estimate is categorized as **medium**, indicating that while the model provides a reasonable approximation, there are variables that could affect the accuracy of the unmet demand figure.",
+      "answer": "The unmet flight demand at San Francisco International Airport (SFO) is estimated to be approximately **1,278,222 annual enplanements**. This figure represents the demand that cannot be accommodated due to specific constraints at the airport.\n\n### Reasons for Unmet Demand:\n\n1. **Weather-Suppressed Throughput**: \n   - The primary factor contributing to unmet demand is the **weather-suppressed throughput**. SFO experiences a significant reduction in arrival capacity during low visibility conditions, which occurs approximately **12% of the year**. During these periods, the airport's parallel runways cannot operate independently due to their proximity, leading to a **50% drop in arrival capacity**. This means that any demand exceeding the reduced capacity during these times cannot be fulfilled.\n\n2. **Structural Capacity Deficit**: \n   - The model did not identify any structural capacity deficit at SFO, indicating that the airport's facilities are generally adequate for its projected demand under normal conditions. However, this does not account for the demand that is not scheduled due to known constraints, which is not reflected in the unmet demand figure.\n\n### Additional Notes:\n- The estimate is considered a **lower bound** because it does not include demand that was never scheduled due to the known constraints, nor does it account for passengers who may choose to drive to competing airports instead.\n- The confidence level of this estimate is **medium**, and it is based on various assumptions about traffic growth and weather conditions.\n\nIn summary, the unmet demand at SFO is primarily driven by weather-related capacity limitations, particularly during periods of low visibility, rather than a lack of structural capacity in the airport's facilities.",
       "turns": 2,
-      "seconds": 7.4,
+      "seconds": 5.1,
       "incomplete": false,
       "tool_calls": [
         {
@@ -684,6 +760,7 @@
             "unit": "annual enplanements",
             "confidence": "medium",
             "caveat": "Utilization is 84% of modelled good-weather capacity, and arrival capacity drops 50% in low visibility because the parallel runways are too close together to fly independently. The runway geometry is the mechanism producing this number, not a competing explanation for it. This is a LOWER BOUND: demand that was never scheduled because the constraint is well known to airlines is invisible here, and so is every passenger who drove to a competing airport instead.",
+            "missing_inputs": [],
             "assumptions": [
               "One arrival stream sustains 7,800,000 annual enplanements \u2014 the 95th percentile actually achieved across the 144 eligible airports, not a theoretical rate. The estimate moves roughly linearly with it.",
               "Instrument conditions are assumed to occur 12% of the year, uniformly at every airport. This is the weakest input in the model: the real rate is intensely local (SFO's summer marine layer vs. Phoenix). Per-airport METAR history would fix it.",

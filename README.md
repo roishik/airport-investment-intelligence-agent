@@ -17,7 +17,7 @@ analysis.
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/pytest -q                     # 257 tests, no key, no network
+.venv/bin/pytest -q                     # 296 tests, no key, no network
 .venv/bin/python -m app.cli             # terminal chat, mock LLM
 .venv/bin/uvicorn app.main:app --reload # web chat at http://127.0.0.1:8000
 ```
@@ -220,7 +220,7 @@ conversion, and staleness date is there. Highlights:
 ## Tests
 
 ```bash
-.venv/bin/pytest -q     # 257 passing
+.venv/bin/pytest -q     # 296 passing
 ```
 
 No network, no API key, no mocking of the pure modules — `scoring.py`,

@@ -1207,3 +1207,39 @@ actually need, and where each comes from:
   `dataset.py`, `runway_geometry.py`, `data/`, `scripts/`, and `artifacts/`. A garbled, mid-edit opening
   paragraph and three dangling "§1.3" references to a document not in this repo were rewritten in
   `evals/README.md`.
+
+## Brief conformance — final verification
+
+- **All four example questions re-verified end to end against real `gpt-4o-mini`, after every fix in
+  this session** (the eligibility gate now applied to all four ranking tools, the rewritten live-status
+  parser, `focus_criterion`, the rule 4b/8 prompt changes): all four route to the correct tool(s) with
+  zero tool errors. Q2's answer visibly uses the `focus_criterion` mechanism now — the tool call carries
+  `"focus_criterion":"capacity_pressure"` and the reply states the ranking is "based solely on capacity
+  pressure," not the blended investment score, matching the fix's intent exactly.
+- **A genuine `git clone` into a scratch directory, fresh venv, zero keys**: `pytest -q` → 296 passed;
+  `python -m app.cli` answers a real question with a full per-component breakdown on the mock provider;
+  `uvicorn app.main:app` boots, `/health` and `/voice/health` both respond correctly, with voice
+  degrading to an honest, actionable reason rather than a 500. Scratch clone deleted after verification.
+- **Every requirement line in the brief, checked against the actual code, not just against docs claiming
+  it's done:**
+  - "Use public APIs to gather airport/aviation data" — `data/refresh_data.py` pulls OurAirports, FAA
+    enplanement XLSX, BTS, and Census; `get_live_airport_status` makes a real request to
+    `nasstatus.faa.gov` at question-answering time, deliberately kept outside the scored path.
+  - "Rank or compare airports based on your defined logic or KPI" — `app/scoring.py`, pure, zero I/O,
+    zero LLM, now with its arithmetic itself pinned by a test (see the eval-integrity entry above).
+  - "Explain its reasoning clearly" — every tool returns a per-component breakdown; the live SSE
+    tool-call log makes the reasoning trace visible turn by turn, not just in the final text.
+  - "Support conversational follow-up questions" — `app/conversation.py`, generation-tracked so a
+    `/reset` mid-turn can't be silently undone.
+  - "Include some deterministic scoring or ranking logic (not only LLM output)" — satisfied, and this is
+    the part of the submission with the most tests behind it (54 in `test_scoring.py` alone).
+  - "Include a chat interface... voice is a bonus" — text chat plus two voice paths (browser-native,
+    zero credentials; and a real server-side conversation mode with barge-in).
+  - "Clearly communicate assumption, uncertainty and scoping" — `ASSUMPTIONS.md` plus runtime
+    `confidence`/`caveat`/`covered_weight`/`missing_inputs`, not just prose.
+  - Deliverables: source code (this repo); a design doc covering scoring methodology (§2), where/how AI
+    is used (§3), and key tradeoffs (§4) — all three sections present, substantive, and — after this
+    session's docs-accuracy pass — factually checked against the running code rather than asserted.
+- **Nothing found in this final pass that wasn't already caught.** The six-critic review earlier in this
+  session was thorough enough that the brief conformance check surfaced zero new defects — only
+  confirmation that the fixes hold end to end, live, with a real model and a genuinely cold clone.

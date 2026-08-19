@@ -20,7 +20,7 @@ is rewarded, not penalized — expect to be pushed on it directly.
   over/under-weighted relative to one on a real multi-year trajectory. A
   3-5 year CAGR would be the fix; not pursued here for time.
 - **Nearest-competitor distance is computed within the full 515-airport
-  FAA commercial-service set** (see `data/candidates.json`'s `_meta`),
+  FAA commercial-service set** (see `data/processed_data/candidates.json`'s `_meta`),
   not the full ~2,500-airport OurAirports universe of GA/private fields.
   A real geographic claim for the vast majority of airports (any nearer
   *scheduled-service* competitor is in this set by construction — FAA's

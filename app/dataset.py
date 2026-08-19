@@ -26,7 +26,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "processed_data"
 
 # FAA hub classes that count as primary airports -- see module docstring.
 ELIGIBLE_HUB_CLASSES = frozenset({"L", "M", "S"})

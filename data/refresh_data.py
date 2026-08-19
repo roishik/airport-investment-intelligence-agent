@@ -1,30 +1,40 @@
 """refresh_data.py -- fetch and rebuild every data file in data/.
 
+data/raw_data/ holds files exactly as fetched from the external source,
+untouched. data/processed_data/ holds everything this script builds or
+derives from them -- the joined, per-airport dataset the app actually
+reads.
+
 EVERY source below is public and KEYLESS -- rebuilding data/ from
 scratch needs no credentials and no signup.
 
-  1. OurAirports (airports.csv, runways.csv) -- a stable public CSV feed,
-     no key, no rate limit, refreshed for real on every run.
+  1. OurAirports (raw_data/airports.csv, raw_data/runways.csv) -- a
+     stable public CSV feed, no key, no rate limit, refreshed for real
+     on every run.
   2. FAA Commercial Service Enplanements (CY2025 preliminary + CY2024
-     final xlsx) -- FAA's own official passenger-boarding counts,
-     published annually with roughly a 6-month lag. Refetched every run;
-     the file names/paths change year to year, so if this 404s, check
+     final xlsx, raw_data/) -- FAA's own official passenger-boarding
+     counts, published annually with roughly a 6-month lag. Refetched
+     every run; the file names/paths change year to year, so if this
+     404s, check
      https://www.faa.gov/airports/planning_capacity/passenger_allcargo_stats/passenger
      for the current filenames and update FAA_CY_CURRENT_URL /
      FAA_CY_PRIOR_URL below.
   3. US Census -- two pieces: the Geocoder (airport coordinates -> county
-     FIPS) and the Population Estimates Vintage 2025 county flat file
-     (population + migration components, 2020-2025).
+     FIPS, written to processed_data/airport_counties.json) and the
+     Population Estimates Vintage 2025 county flat file (population +
+     migration components, 2020-2025, written to
+     processed_data/census_county_population.json).
   4. BTS T100 Segment Summary By Origin Airport, filtered to ANC
-     (bts_anc_origin_summary.json) -- a public Socrata API on
+     (raw_data/bts_anc_origin_summary.json) -- a public Socrata API on
      data.bts.gov. NOT refetched by fetch_sources() below (it was pulled
      once via `curl`, see DECISIONS.md 2026-08-18); rerun manually if it
      needs refreshing:
-       curl -s "https://data.bts.gov/resource/r495-tyji.json?origin_airport_code=ANC&\\$limit=5000&\\$order=reporting_month" -o data/bts_anc_origin_summary.json
+       curl -s "https://data.bts.gov/resource/r495-tyji.json?origin_airport_code=ANC&\\$limit=5000&\\$order=reporting_month" -o data/raw_data/bts_anc_origin_summary.json
 
-build_candidates() joins (1), (2) and (3) into data/candidates.json --
-the per-airport dataset the tools read. build_anc_traffic_mix() turns
-(4) into data/anc_traffic_mix.json (Anchorage's domestic/international
+build_candidates() joins (1), (2) and (3) into
+processed_data/candidates.json -- the per-airport dataset the tools
+read. build_anc_traffic_mix() turns (4) into
+processed_data/anc_traffic_mix.json (Anchorage's domestic/international
 departure mix for the long-haul-percentage question).
 
 Run:
@@ -43,8 +53,9 @@ from pathlib import Path
 
 import openpyxl
 
-DATA_DIR = Path(__file__).parent
-sys.path.insert(0, str(DATA_DIR.parent))
+RAW_DIR = Path(__file__).parent / "raw_data"
+PROCESSED_DIR = Path(__file__).parent / "processed_data"
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.runway_geometry import Runway, arrival_capacity  # noqa: E402
 
@@ -103,7 +114,7 @@ def fetch_sources() -> None:
         ("faa_cy2025_enplanements_preliminary.xlsx", FAA_CY_CURRENT_URL),
         ("faa_cy2024_enplanements.xlsx", FAA_CY_PRIOR_URL),
     ):
-        dest = DATA_DIR / name
+        dest = RAW_DIR / name
         print(f"fetching {url} -> {dest}")
         urllib.request.urlretrieve(url, dest)
         print(f"  ok, {dest.stat().st_size:,} bytes")
@@ -163,7 +174,7 @@ def _index_ourairports() -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
     """
     by_iata: dict[str, list[dict]] = {}
     by_local: dict[str, list[dict]] = {}
-    with open(DATA_DIR / "airports.csv", newline="", encoding="utf-8") as f:
+    with open(RAW_DIR / "airports.csv", newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             if row["iso_country"] not in US_COUNTRIES:
                 continue
@@ -191,7 +202,7 @@ def geocode_airports_to_counties(force: bool = False) -> None:
     re-run costs nothing and a partial failure can be resumed rather than
     restarting all ~515 lookups. Pass force=True to re-fetch everything.
     """
-    out_path = DATA_DIR / "airport_counties.json"
+    out_path = PROCESSED_DIR / "airport_counties.json"
     cached: dict[str, dict] = {}
     if out_path.exists() and not force:
         cached = json.loads(out_path.read_text()).get("airports", {})
@@ -325,7 +336,7 @@ def fetch_census_county_population() -> None:
         },
         "counties": dict(sorted(counties.items())),
     }
-    (DATA_DIR / "census_county_population.json").write_text(json.dumps(out, indent=2))
+    (PROCESSED_DIR / "census_county_population.json").write_text(json.dumps(out, indent=2))
     print(f"wrote census_county_population.json: {len(counties)} counties")
 
 
@@ -348,7 +359,7 @@ def _resolve_faa_airports() -> tuple[dict[str, dict], list[str]]:
     (The other half of the collision problem -- US LIDs colliding with
     FOREIGN IATA codes -- is handled upstream in _index_ourairports().)
     """
-    faa_2025 = _load_faa(DATA_DIR / "faa_cy2025_enplanements_preliminary.xlsx")
+    faa_2025 = _load_faa(RAW_DIR / "faa_cy2025_enplanements_preliminary.xlsx")
     by_iata, by_local = _index_ourairports()
 
     airports: dict[str, dict] = {}
@@ -368,8 +379,8 @@ def _load_population_layer() -> tuple[dict[str, dict], dict[str, dict]]:
     ({locid: county_record}, {fips: population_record}) -- empty dicts if
     the caches don't exist, which is what makes population an OPTIONAL
     layer rather than a hard build dependency."""
-    counties_path = DATA_DIR / "airport_counties.json"
-    pop_path = DATA_DIR / "census_county_population.json"
+    counties_path = PROCESSED_DIR / "airport_counties.json"
+    pop_path = PROCESSED_DIR / "census_county_population.json"
     if not (counties_path.exists() and pop_path.exists()):
         return {}, {}
     airport_counties = json.loads(counties_path.read_text())["airports"]
@@ -472,8 +483,8 @@ def build_candidates() -> None:
     so a reviewer with no Census API key can still rebuild everything
     else. See attach_population().
     """
-    faa_2025 = _load_faa(DATA_DIR / "faa_cy2025_enplanements_preliminary.xlsx")
-    faa_2024 = _load_faa(DATA_DIR / "faa_cy2024_enplanements.xlsx")
+    faa_2025 = _load_faa(RAW_DIR / "faa_cy2025_enplanements_preliminary.xlsx")
+    faa_2024 = _load_faa(RAW_DIR / "faa_cy2024_enplanements.xlsx")
     airports, unmatched = _resolve_faa_airports()
     if unmatched:
         print(f"WARNING: {len(unmatched)} FAA airports have no OurAirports match: {sorted(unmatched)}")
@@ -485,7 +496,7 @@ def build_candidates() -> None:
     # parallel runways are far enough apart to fly independently when the
     # ceiling drops. See app/runway_geometry.py.
     runway_geom: dict[str, list[Runway]] = {locid: [] for locid in airports}
-    with open(DATA_DIR / "runways.csv", newline="", encoding="utf-8") as f:
+    with open(RAW_DIR / "runways.csv", newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             locid = id_to_locid.get(row["airport_ref"])
             if not locid or row.get("closed") == "1":
@@ -613,7 +624,7 @@ def build_candidates() -> None:
         },
         "airports": candidates,
     }
-    (DATA_DIR / "candidates.json").write_text(json.dumps(out, indent=2))
+    (PROCESSED_DIR / "candidates.json").write_text(json.dumps(out, indent=2))
     print(f"wrote candidates.json: {len(candidates)} airports")
 
 
@@ -650,7 +661,7 @@ def build_anc_traffic_mix() -> None:
     OUT OF Anchorage, so including it would answer a different question
     ("ANC's total international exposure") under the guise of this one.
     """
-    raw = json.loads((DATA_DIR / "bts_anc_origin_summary.json").read_text())
+    raw = json.loads((RAW_DIR / "bts_anc_origin_summary.json").read_text())
 
     monthly = []
     annual: dict[str, dict] = {}
@@ -711,7 +722,7 @@ def build_anc_traffic_mix() -> None:
         "annual": annual_summary,
         "monthly": monthly,
     }
-    (DATA_DIR / "anc_traffic_mix.json").write_text(json.dumps(out, indent=2))
+    (PROCESSED_DIR / "anc_traffic_mix.json").write_text(json.dumps(out, indent=2))
     print(f"wrote anc_traffic_mix.json: {len(monthly)} months, {len(annual_summary)} years")
 
 

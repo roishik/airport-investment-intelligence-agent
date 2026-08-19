@@ -76,15 +76,20 @@ directly. `refresh_data.py` rebuilds all of them from the five public
 sources listed in `DECISIONS_SUMMARY.md` §2; every fetch is idempotent
 and keyless.
 
+`raw_data/` is exactly what was fetched from each external source, untouched.
+`processed_data/` is everything `refresh_data.py` builds or derives from
+it — `app/dataset.py` only ever reads from `processed_data/`.
+
 | File | Contents |
 |---|---|
-| `airports.csv`, `runways.csv` | OurAirports bulk export — identity, geo, runway geometry |
-| `faa_cy2024_enplanements.xlsx`, `faa_cy2025_enplanements_preliminary.xlsx` | FAA Commercial Service Enplanements |
-| `census_county_population.json` | Census PEP Vintage 2025 county totals, two growth windows |
-| `airport_counties.json` | Airport → county FIPS join (via Census Geocoder) |
-| `bts_anc_origin_summary.json`, `anc_traffic_mix.json` | Raw BTS T-100 pull for ANC, and the built domestic/international share |
-| `candidates.json` | The built, joined table `dataset.py` actually loads — one row per airport, `_meta` block documents provenance and known limitations |
-| `refresh_data.py` | Fetch-and-rebuild pipeline for everything above |
+| `raw_data/airports.csv`, `raw_data/runways.csv` | OurAirports bulk export — identity, geo, runway geometry |
+| `raw_data/faa_cy2024_enplanements.xlsx`, `raw_data/faa_cy2025_enplanements_preliminary.xlsx` | FAA Commercial Service Enplanements |
+| `raw_data/bts_anc_origin_summary.json` | Raw BTS T-100 pull for ANC (one-time `curl`, see `DECISIONS.md`) |
+| `processed_data/census_county_population.json` | Census PEP Vintage 2025 county totals, two growth windows |
+| `processed_data/airport_counties.json` | Airport → county FIPS join (via Census Geocoder) |
+| `processed_data/anc_traffic_mix.json` | Built domestic/international departure share for ANC |
+| `processed_data/candidates.json` | The built, joined table `dataset.py` actually loads — one row per airport, `_meta` block documents provenance and known limitations |
+| `refresh_data.py` | Fetch-and-rebuild pipeline for everything above (stays at `data/`, alongside the two subfolders, not inside either) |
 
 ## `evals/` — the eval harness
 
@@ -134,12 +139,18 @@ isn't installed — `pytest` stays zero-setup either way).
 
 ## Docs — which one to open
 
+`README.md`, `DESIGN_DOC.md`, `DECISIONS.md`, `ASSUMPTIONS.md`, and
+`evaluation_plan.md` are at the repo root — the brief's required
+deliverables. This file and its sibling below live in `docs/`, since
+neither is something the brief asks for; they're navigation aids for
+whoever (Roi included) needs to find a specific file or decision fast.
+
 | File | For |
 |---|---|
-| `README.md` | Quickstart, layout, how to run it |
-| `DESIGN_DOC.md` | Scoring methodology, where AI is used, key tradeoffs — the brief's required design doc |
-| `DECISIONS_SUMMARY.md` | This file's sibling — every decision, by subject, a few sentences each |
-| `DECISIONS.md` | The full build-order log — every decision, every rejected alternative, every number |
-| `ASSUMPTIONS.md` | Every data gap, unit conversion, staleness date |
-| `evaluation_plan.md` | The eval test matrix and real run results |
-| `ARCHITECTURE.md` | This file |
+| `README.md` (root) | Quickstart, layout, how to run it |
+| `DESIGN_DOC.md` (root) | Scoring methodology, where AI is used, key tradeoffs — the brief's required design doc |
+| `DECISIONS.md` (root) | The full build-order log — every decision, every rejected alternative, every number |
+| `ASSUMPTIONS.md` (root) | Every data gap, unit conversion, staleness date |
+| `evaluation_plan.md` (root) | The eval test matrix and real run results |
+| `docs/DECISIONS_SUMMARY.md` | This file's sibling — every decision, by subject, a few sentences each |
+| `docs/ARCHITECTURE.md` | This file |

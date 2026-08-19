@@ -13,29 +13,38 @@ eligible airports, and the actual top two (Nashville and Denver) are
 at a 5–10% change. See `DESIGN_DOC.md` §2 for the full sensitivity
 analysis.
 
-## Run it in one minute, with no API key
+## Run it
 
 ```bash
+git clone https://github.com/roishik/airport-investment-intelligence-agent.git
+cd airport-investment-intelligence-agent
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/pytest -q                     # 296 tests, no key, no network
-.venv/bin/python -m app.cli             # terminal chat, mock LLM
-.venv/bin/uvicorn app.main:app --reload # web chat at http://127.0.0.1:8000
+cp .env.example .env
 ```
 
-That works because `LLM_PROVIDER` defaults to `mock`. To use a real
-model, copy `.env.example` to `.env` and set:
+Now edit `.env` and add your key: `OPENAI_API_KEY=sk-...`.
+`LLM_PROVIDER=openai` is already set — that's the only required edit;
+everything else in `.env.example` is optional (see the note below).
+Then:
 
 ```bash
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-...
+.venv/bin/uvicorn app.main:app --reload
 ```
 
-`LLM_PROVIDER=anthropic` works the same way. **No paid key?**
-`LLM_PROVIDER=groq` + a free key from
-[console.groq.com/keys](https://console.groq.com/keys) (no credit card)
-gets you the real tool-calling agent, not just the mock stand-in — see
-`app/providers/llm/groq_llm.py`. Nothing outside `app/config.py` and
-`app/providers/llm/` changes when you swap.
+Open **http://127.0.0.1:8000**. That's the real tool-calling agent
+against `gpt-4o-mini` — including voice (open mic, spoken replies,
+barge-in), which reuses the same `OPENAI_API_KEY` rather than needing a
+second credential.
+
+> **No key on hand, or want to see it run first?** `LLM_PROVIDER`
+> defaults to `mock`, so `.venv/bin/pytest -q` (296 tests) and
+> `.venv/bin/python -m app.cli` both work with zero setup, no network,
+> no key. `LLM_PROVIDER=anthropic`, or `=groq` (a free key, no credit
+> card, from [console.groq.com/keys](https://console.groq.com/keys)),
+> are drop-in alternatives to OpenAI for the agent itself — set the
+> provider and its key in `.env`, nothing else changes. Voice's own
+> `TTS_PROVIDER=google` is a similar optional swap; see `.env.example`
+> for which variable each one needs.
 
 ## Layout
 
@@ -50,8 +59,9 @@ artifacts/  saved output of scripts/run_example_questions.py
 ```
 
 **File-by-file map, what each one does, and how a request flows through
-them: see [`ARCHITECTURE.md`](ARCHITECTURE.md). Why things were built
-this way: [`DECISIONS_SUMMARY.md`](DECISIONS_SUMMARY.md) (by subject) or
+them: see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Why things
+were built this way:
+[`docs/DECISIONS_SUMMARY.md`](docs/DECISIONS_SUMMARY.md) (by subject) or
 [`DECISIONS.md`](DECISIONS.md) (the full build-order log).**
 
 ## The four question shapes
